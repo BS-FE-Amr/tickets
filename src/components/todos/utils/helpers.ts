@@ -10,7 +10,7 @@ export function createData(
   return { id, todo, completed, userId };
 }
 
-export const columns: readonly Column[] = [
+export const columns: readonly Column<TodosData>[] = [
   { id: 'id', label: 'Id', minWidth: 170 },
   { id: 'todo', label: 'Todo', minWidth: 100 },
   {

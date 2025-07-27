@@ -1,7 +1,10 @@
+import { getCookie } from '../utils/helpers';
+
 const useLoginData = () => {
-  const token = localStorage.getItem('token');
+  const token = getCookie('token');
 
   return { token };
 };
 
 export default useLoginData;
+

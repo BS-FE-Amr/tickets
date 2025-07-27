@@ -2,7 +2,7 @@ import { Button, TextField } from '@mui/material';
 import useLogin from '../hooks/use-login';
 
 const LoginForm = () => {
-  const { errors, formSubmitLoading, handleChange, handleSubmit, formData } =
+  const { errors, isLoading, handleChange, handleSubmit, formData } =
     useLogin();
 
   return (
@@ -14,15 +14,15 @@ const LoginForm = () => {
           <div className="py-[24px] px-[40px] rounded-[24px] bg-slate-100 flex flex-col gap-[24px] items-center justify-center w-fit">
             <TextField
               id="outlined-basic"
-              label="Email"
+              label="User Name"
               variant="outlined"
-              type="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
-              error={!!errors.email}
-              helperText={errors.email}
-              disabled={formSubmitLoading}
+              error={!!errors.username}
+              helperText={errors.username}
+              disabled={isLoading}
             />
             <TextField
               id="outlined-basic"
@@ -34,12 +34,10 @@ const LoginForm = () => {
               onChange={handleChange}
               error={!!errors.password}
               helperText={errors.password}
-              disabled={formSubmitLoading}
+              disabled={isLoading}
             />
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={formSubmitLoading}>
+            {errors?.global && <p>{errors.global}</p>}
+            <Button type="submit" variant="contained" disabled={isLoading}>
               Login
             </Button>
           </div>

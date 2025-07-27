@@ -1,27 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { TodosFilterValue, TodosResponse } from '../types/todos.types';
+import type { UsersFilterValue, UsersResponse } from '../types/users.types';
 import { useCustomFetch } from '../../../hooks/use-custom-fetch';
 
-const useTodos = (
+const useUsers = (
   page: number,
   pageSize: number,
-  filterKey: TodosFilterValue,
+  filterKey: UsersFilterValue,
   searchValue: string,
 ) => {
   const customFetch = useCustomFetch();
-  const [data, setData] = useState<TodosResponse | null>(null);
+  const [data, setData] = useState<UsersResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const fetchTodos = useCallback(async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const resData = await customFetch<TodosResponse>(
-        `https://dummyjson.com/auth/todos?limit=${pageSize}&skip=${
-          pageSize * page
-        }`,
+      const resData = await customFetch<UsersResponse>(
+        filterKey && searchValue
+          ? `https://dummyjson.com/auth/users/filter?limit=${pageSize}&skip=${
+              pageSize * page
+            }&key=${filterKey}&value=${searchValue}`
+          : `https://dummyjson.com/auth/users?limit=${pageSize}&skip=${
+              pageSize * page
+            }`,
       );
 
       setData(resData);
@@ -37,11 +41,11 @@ const useTodos = (
   }, [page, pageSize, filterKey, searchValue]);
 
   useEffect(() => {
-    fetchTodos();
-  }, [fetchTodos]);
+    fetchUsers();
+  }, [fetchUsers]);
 
   return { data, error, isLoading };
 };
 
-export default useTodos;
+export default useUsers;
 

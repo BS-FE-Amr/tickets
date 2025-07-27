@@ -7,6 +7,7 @@ import ProtectedRoute from './routes/protected-route.tsx';
 import NotFound from './routes/not-found.tsx';
 import Dashboard from './routes/dashboard/dashboard.tsx';
 import Navbar from './components/common/ui/navbar.tsx';
+import UsersPage from './routes/users/users.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
         <Route element={<ProtectedRoute />}>
           <Route element={<Navbar />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/users" element={<UsersPage />} />
           </Route>
         </Route>
         <Route element={<ProtectedRoute isAnonymousRequired={true} />}>

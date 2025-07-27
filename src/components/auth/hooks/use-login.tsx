@@ -1,19 +1,21 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import useLoginRequest from './use-login-request';
+import type { FormDataError, FormDataInterface } from '../types/login';
 
 const useLogin = () => {
-  const navigate = useNavigate();
-
-  const [formSubmitLoading, setFormSubmitLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
+  // const [formSubmitLoading, setFormSubmitLoading] = useState(false);
+  const [formData, setFormData] = useState<FormDataInterface>({
+    username: '',
     password: '',
   });
 
-  const [errors, setErrors] = useState({
-    email: '',
+  const [errors, setErrors] = useState<FormDataError>({
+    global: '',
+    username: '',
     password: '',
   });
+
+  const { getUser, isLoading } = useLoginRequest(setFormData, setErrors);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -26,26 +28,29 @@ const useLogin = () => {
     // Clear error when user types
     setErrors((prev) => ({
       ...prev,
+      global: '',
       [name]: '',
     }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setFormSubmitLoading(true);
+    // setFormSubmitLoading(true);
+    console.log('A?');
 
-    const { email, password } = formData;
+    const { username, password } = formData;
 
     let hasError = false;
-    const newErrors = { email: '', password: '' };
+    const newErrors = { username: '', password: '', global: '' };
 
-    if (!email) {
-      newErrors.email = 'Email is required';
-      hasError = true;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+    if (!username) {
+      newErrors.username = 'Username is required';
       hasError = true;
     }
+    // else if (!/\S+@\S+\.\S+/.test(username)) {
+    //   newErrors.username = 'Username is invalid';
+    //   hasError = true;
+    // }
 
     if (!password) {
       newErrors.password = 'Password is required';
@@ -57,22 +62,21 @@ const useLogin = () => {
 
     if (hasError) {
       setErrors(newErrors);
-      setFormSubmitLoading(false);
+      // setFormSubmitLoading(false);
+      console.log(newErrors);
+      console.log('AS?');
       return;
     }
 
-    setFormSubmitLoading(false);
+    // setFormSubmitLoading(false);
 
-    setFormData({
-      email: '',
-      password: '',
-    });
     localStorage.setItem('token', 'loggedIn');
-    navigate('/dashboard');
+    console.log('B?');
+    await getUser(formData.username, formData.password);
     // alert('HELLO');
   };
 
-  return { formSubmitLoading, errors, handleChange, handleSubmit, formData };
+  return { isLoading, errors, handleChange, handleSubmit, formData };
 };
 
 export default useLogin;

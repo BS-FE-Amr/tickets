@@ -1,5 +1,5 @@
-export interface Column {
-  id: 'id' | 'todo' | 'completed' | 'userId';
+export interface Column<T> {
+  id: keyof T;
   label: string;
   minWidth?: number;
   align?: 'right';

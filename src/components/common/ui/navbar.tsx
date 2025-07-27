@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { NavLink, Outlet } from 'react-router';
 import useLogout from '../../../hooks/use-logout';
 
 const Navbar = () => {
@@ -7,7 +7,9 @@ const Navbar = () => {
   return (
     <>
       <nav className="bg-slate-200 fixed w-full h-[48px] flex items-center justify-center top-0">
-        <div className="container">
+        <div className="container flex items-center gap-[24px]">
+          <NavLink to={'/dashboard'}>Dashboard</NavLink>
+          <NavLink to={'/dashboard/users'}>Users</NavLink>
           <button onClick={handleLogout}>Logout</button>
         </div>
       </nav>
