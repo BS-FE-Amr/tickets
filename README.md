@@ -12,6 +12,7 @@ A simple ticket management system built with React and TypeScript. It includes s
 
 ## 📂 Project Structure
 
+```
 src/
 │
 ├── assets/ # Static files (e.g., logos)
@@ -25,6 +26,7 @@ src/
 ├── providers/ # App providers
 ├── routes/ # App routes
 └── main.tsx # Main file
+```
 
 ## 🛠️ Installation
 
