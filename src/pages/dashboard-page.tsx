@@ -95,7 +95,7 @@ const DashboardPage = () => {
         {/* Todos Table */}
         <DataDisplay<TodosResponse | null>
           data={data}
-          error={error}
+          error={error?.message}
           isLoading={isLoading}>
           <Paper sx={{ width: '100%', overflow: 'hidden' }}>
             <TableContainer sx={{ maxHeight: 440 }}>

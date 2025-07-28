@@ -153,7 +153,7 @@ const UsersPage = () => {
         {/* Users Table */}
         <DataDisplay<UsersResponse | null>
           data={data}
-          error={error}
+          error={error?.message}
           isLoading={isLoading}>
           <Paper sx={{ width: '100%', overflow: 'hidden' }}>
             <TableContainer sx={{ maxHeight: 440 }}>
