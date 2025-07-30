@@ -13,7 +13,9 @@ api.interceptors.request.use(
       return config;
     }
 
-    const token = localStorage.getItem('access_token');
+    const token =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,7 +37,9 @@ api.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken =
+        localStorage.getItem('refresh_token') ||
+        sessionStorage.getItem('refresh_token');
       try {
         const { data } = await axios.post(
           'https://dummyjson.com/auth/refresh',

@@ -1,4 +1,13 @@
-import { Button, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Link,
+  Paper,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import api from '../services/api';
 import { useMutation } from '@tanstack/react-query';
@@ -7,6 +16,7 @@ import { useNavigate } from 'react-router';
 interface FormDataInterface {
   username: string;
   password: string;
+  remember: boolean;
 }
 
 interface FormDataError {
@@ -30,8 +40,13 @@ const LoginPage = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: () => loginUser(),
     onSuccess: (data) => {
-      localStorage.setItem('access_token', data?.accessToken);
-      localStorage.setItem('refresh_token', data?.refreshToken);
+      if (formData.remember) {
+        localStorage.setItem('access_token', data?.accessToken);
+        localStorage.setItem('refresh_token', data?.refreshToken);
+      } else {
+        sessionStorage.setItem('access_token', data?.accessToken);
+        sessionStorage.setItem('refresh_token', data?.refreshToken);
+      }
       navigate('/dashboard');
     },
     onError: (error) => {
@@ -47,6 +62,7 @@ const LoginPage = () => {
   const [formData, setFormData] = useState<FormDataInterface>({
     username: '',
     password: '',
+    remember: false,
   });
 
   const [errors, setErrors] = useState<FormDataError>({
@@ -103,52 +119,83 @@ const LoginPage = () => {
     mutate();
   };
 
+  const handleCheckChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]:
+        e.target.type === 'checkbox' ? e.target.checked : e.target.value,
+    }));
+  };
+
   return (
     <div className="w-full h-screen grid place-items-center justify-center">
       <div className="container">
-        <Typography
-          variant="h3"
-          sx={{
-            fontFamily: 'Rubik, sans-serif',
-            fontWeight: '900',
-            fontSize: '40px',
-            marginBottom: '24px',
-          }}>
-          Login
-        </Typography>
-
-        <form onSubmit={handleSubmit}>
-          <div className="py-[24px] px-[40px] rounded-[24px] bg-slate-100 flex flex-col gap-[24px] items-center justify-center w-fit">
-            <TextField
-              id="outlined-basic"
-              label="User Name"
-              variant="outlined"
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              error={!!errors.username}
-              helperText={errors.username}
-              disabled={isPending}
-            />
-            <TextField
-              id="outlined-basic"
-              label="Password"
-              variant="outlined"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              error={!!errors.password}
-              helperText={errors.password}
-              disabled={isPending}
-            />
-            {errors?.global && <p>{errors.global}</p>}
-            <Button type="submit" variant="contained" disabled={isPending}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          height="100vh">
+          <Paper elevation={3} sx={{ padding: 4, width: 400 }}>
+            <Typography variant="h5" align="center" gutterBottom>
               Login
-            </Button>
-          </div>
-        </form>
+            </Typography>
+
+            <form onSubmit={handleSubmit}>
+              <div className="py-[24px] flex flex-col gap-[24px] ">
+                <TextField
+                  id="outlined-basic"
+                  label="User Name"
+                  variant="outlined"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  error={!!errors.username}
+                  helperText={errors.username}
+                  disabled={isPending}
+                />
+                <TextField
+                  id="outlined-basic"
+                  label="Password"
+                  variant="outlined"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={!!errors.password}
+                  helperText={errors.password}
+                  disabled={isPending}
+                />
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center">
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        name="remember"
+                        checked={formData.remember}
+                        onChange={handleCheckChange}
+                      />
+                    }
+                    label="Remember Me"
+                  />
+                  <Link href="#" variant="body2">
+                    Forgot Password?
+                  </Link>
+                </Box>
+
+                {errors?.global && <p>{errors.global}</p>}
+                <Button type="submit" variant="contained" disabled={isPending}>
+                  Login
+                </Button>
+                <Typography align="center" variant="body2">
+                  New User? <Link href="#">Signup</Link>
+                </Typography>
+              </div>
+            </form>
+          </Paper>
+        </Box>
       </div>
     </div>
   );

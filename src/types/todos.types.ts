@@ -12,3 +12,8 @@ export interface TodosResponse {
   limit: number;
 }
 
+export interface TodosNewData {
+  todo: string;
+  completed: string;
+  userId: string;
+}

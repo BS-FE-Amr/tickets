@@ -1,4 +1,8 @@
 import {
+  Box,
+  Button,
+  Link,
+  Modal,
   Paper,
   Table,
   TableBody,
@@ -13,7 +17,8 @@ import DataDisplay from '../components/data-display';
 import type { TodosData, TodosResponse } from '../types/todos.types';
 import { useMemo, useState } from 'react';
 import api from '../services/api';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 interface Column {
   id: 'id' | 'todo' | 'completed' | 'userId';
@@ -26,6 +31,7 @@ interface Column {
 const DashboardPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const queryClient = useQueryClient();
 
   const { data, error, isLoading } = useQuery({
     queryKey: ['todos', page, rowsPerPage],
@@ -85,12 +91,56 @@ const DashboardPage = () => {
     );
   }, [data]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const handleOpenModal = (id: number | null) => {
+    setSelectedId(id);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedId(null);
+    setIsModalOpen(false);
+  };
+
+  const DeleteTodo = async () => {
+    const { data } = await api.delete(`/auth/todos/${selectedId}`);
+    return data;
+  };
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: DeleteTodo,
+    onSuccess: (data) => {
+      console.log(data);
+      handleCloseModal();
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
+      toast.success(`Todo #${data.id} Deleted Successfully!`);
+    },
+    onError: (error) => {},
+  });
+
+  const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    border: '2px solid #000',
+    boxShadow: 24,
+    p: 4,
+  };
+
   return (
     <div className="container mt-[24px]">
       {/* Todos Header */}
-      <Typography variant="h5" fontWeight="fontWeightBold">
-        Todos
-      </Typography>
+      <div className="flex justify-between items-center">
+        <Typography variant="h5" fontWeight="bold">
+          Todos
+        </Typography>
+        <Link href={`/todos/new`}>Add New Todo</Link>
+      </div>
       <div className="mt-[24px] ">
         {/* Todos Table */}
         <DataDisplay<TodosResponse | null>
@@ -110,6 +160,7 @@ const DashboardPage = () => {
                         {column.label}
                       </TableCell>
                     ))}
+                    <TableCell align={'center'}>{'Actions'}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -130,6 +181,16 @@ const DashboardPage = () => {
                             </TableCell>
                           );
                         })}
+                        <TableCell align={'center'}>
+                          <Link href={`/todos/${row.id}`}>View</Link>
+                          <Link href={`/todos/${row.id}/edit`}>Edit</Link>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleOpenModal(Number(row.id))}>
+                            Delete
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -146,6 +207,27 @@ const DashboardPage = () => {
               onRowsPerPageChange={handleChangeRowsPerPage}
             />
           </Paper>
+
+          <Modal
+            open={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            aria-labelledby="modal-title"
+            aria-describedby="modal-description">
+            <Box sx={style}>
+              <Typography variant="h5" fontWeight="bold">
+                Are you sure you want to delete todo #{selectedId}
+              </Typography>
+
+              <div className="flex justify-between">
+                <Button onClick={handleCloseModal} disabled={isPending}>
+                  Close
+                </Button>
+                <Button onClick={() => mutate()} disabled={isPending}>
+                  Delete
+                </Button>
+              </div>
+            </Box>
+          </Modal>
         </DataDisplay>
       </div>
     </div>

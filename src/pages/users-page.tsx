@@ -55,7 +55,7 @@ const UsersPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  const { data, error, isLoading } = useQuery({
+  const { data, error, isLoading } = useQuery<UsersResponse>({
     queryKey: ['users', page, rowsPerPage, searchValue, filterValue],
     queryFn: () =>
       api
@@ -151,7 +151,7 @@ const UsersPage = () => {
         </div>
 
         {/* Users Table */}
-        <DataDisplay<UsersResponse | null>
+        <DataDisplay<UsersResponse | undefined>
           data={data}
           error={error?.message}
           isLoading={isLoading}>

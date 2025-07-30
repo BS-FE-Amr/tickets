@@ -7,8 +7,12 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({
   isAnonymousRequired = false,
 }: ProtectedRouteProps) {
-  const access_token = localStorage.getItem('access_token');
-  const refresh_token = localStorage.getItem('refresh_token');
+  const access_token =
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('access_token');
+  const refresh_token =
+    localStorage.getItem('refresh_token') ||
+    sessionStorage.getItem('refresh_token');
   const tokens = !!access_token && !!refresh_token;
 
   if (isAnonymousRequired) {
