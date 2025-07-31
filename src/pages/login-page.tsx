@@ -9,7 +9,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 

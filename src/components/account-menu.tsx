@@ -10,21 +10,22 @@ import Tooltip from '@mui/material/Tooltip';
 import Logout from '@mui/icons-material/Logout';
 import type { UsersFullData } from '../types/users.types';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/api';
 import DataDisplay from './data-display';
 import { useNavigate } from 'react-router';
-import { Typography } from '@mui/material';
+import { fetchMyData } from '../services/users-service';
 
 export default function AccountMenu() {
   const { data, error, isLoading } = useQuery<UsersFullData>({
     queryKey: ['me'],
-    queryFn: () => api.get('/auth/user/me').then((res) => res.data),
+    queryFn: fetchMyData,
   });
 
   const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
     navigate('/login');
   };
 

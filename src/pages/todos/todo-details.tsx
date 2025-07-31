@@ -1,17 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import React from 'react';
 import type { TodosData } from '../../types/todos.types';
 import { useParams } from 'react-router';
-import api from '../../services/api';
 import DataDisplay from '../../components/data-display';
 import { Box, Link, Paper, Typography } from '@mui/material';
+import { fetchTodo } from '../../services/todos-service-';
 
 const TodoDetails = () => {
   const { id } = useParams();
 
   const { data, error, isLoading } = useQuery<TodosData>({
     queryKey: ['todos', id],
-    queryFn: () => api.get(`/auth/todos/${id}`).then((res) => res.data),
+    queryFn: () => fetchTodo(String(id)),
   });
 
   return (

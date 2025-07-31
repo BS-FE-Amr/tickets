@@ -16,7 +16,7 @@ import {
 import DataDisplay from '../components/data-display';
 import type { TodosData, TodosResponse } from '../types/todos.types';
 import { useMemo, useState } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
@@ -117,7 +117,6 @@ const DashboardPage = () => {
       queryClient.invalidateQueries({ queryKey: ['todos'] });
       toast.success(`Todo #${data.id} Deleted Successfully!`);
     },
-    onError: (error) => {},
   });
 
   const style = {

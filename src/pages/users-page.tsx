@@ -24,7 +24,7 @@ import type {
 } from '../types/users.types';
 import DataDisplay from '../components/data-display';
 import { useQuery } from '@tanstack/react-query';
-import api from '../services/api';
+import { fetchUsers } from '../services/users-service';
 
 interface Column {
   id: 'id' | 'firstName' | 'lastName' | 'age';
@@ -57,16 +57,7 @@ const UsersPage = () => {
 
   const { data, error, isLoading } = useQuery<UsersResponse>({
     queryKey: ['users', page, rowsPerPage, searchValue, filterValue],
-    queryFn: () =>
-      api
-        .get(
-          filterValue && searchValue
-            ? `/auth/users/filter?limit=${rowsPerPage}&skip=${
-                rowsPerPage * page
-              }&key=${filterValue}&value=${searchValue}`
-            : `/auth/users?limit=${rowsPerPage}&skip=${rowsPerPage * page}`,
-        )
-        .then((res) => res.data),
+    queryFn: () => fetchUsers(searchValue, filterValue, rowsPerPage, page),
   });
 
   const handleChangePage = (_event: unknown, newPage: number) => {

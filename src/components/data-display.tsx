@@ -1,5 +1,5 @@
-import { CircularProgress } from '@mui/material';
 import type { ChildrenType } from '../types/general.types';
+import Loading from './loading';
 
 type IsLoadingType = boolean;
 type ErrorType = string | null | undefined;
@@ -18,7 +18,7 @@ const DataDisplay = <T,>({
   children,
 }: DataDisplayInterface<T>) => {
   if (isLoading) {
-    return <CircularProgress />;
+    return <Loading />;
   }
 
   if (error) {
@@ -29,7 +29,7 @@ const DataDisplay = <T,>({
     return children;
   }
 
-  return <CircularProgress />;
+  return <Loading />;
 };
 
 export default DataDisplay;
