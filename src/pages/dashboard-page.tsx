@@ -1,7 +1,7 @@
 import {
   Box,
   Button,
-  Link,
+  IconButton,
   Modal,
   Paper,
   Table,
@@ -19,6 +19,11 @@ import { useMemo, useState } from 'react';
 import api from '../utils/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { Link, useNavigate } from 'react-router';
+
+import DeleteIcon from '@mui/icons-material/Delete';
+import Tooltip from '@mui/material/Tooltip';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 interface Column {
   id: 'id' | 'todo' | 'completed' | 'userId';
@@ -84,7 +89,7 @@ const DashboardPage = () => {
         return createData(
           todo?.id,
           todo?.todo,
-          todo?.completed ? 'true' : 'false',
+          todo?.completed ? '✅' : '❌',
           todo?.userId,
         );
       }) || []
@@ -131,15 +136,28 @@ const DashboardPage = () => {
     p: 4,
   };
 
+  const navigate = useNavigate();
+
   return (
     <div className="container mt-[24px]">
       {/* Todos Header */}
-      <div className="flex justify-between items-center">
-        <Typography variant="h5" fontWeight="bold">
-          Todos
-        </Typography>
-        <Link href={`/todos/new`}>Add New Todo</Link>
-      </div>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}>
+        <Typography variant="h4">Todos List</Typography>
+        <Button
+          component={Link}
+          to="/todos/new"
+          variant="contained"
+          color="primary">
+          Add New Todo
+        </Button>
+      </Box>
+
       <div className="mt-[24px] ">
         {/* Todos Table */}
         <DataDisplay<TodosResponse | null>
@@ -154,12 +172,21 @@ const DashboardPage = () => {
                     {columns.map((column) => (
                       <TableCell
                         key={column.id}
-                        align={column.align}
-                        style={{ minWidth: column.minWidth }}>
+                        align={'left'}
+                        style={{
+                          minWidth: column.minWidth,
+                          fontWeight: 'bold',
+                        }}>
                         {column.label}
                       </TableCell>
                     ))}
-                    <TableCell align={'center'}>{'Actions'}</TableCell>
+                    <TableCell
+                      align={'left'}
+                      style={{
+                        fontWeight: 'bold',
+                      }}>
+                      {'Actions'}
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -173,7 +200,7 @@ const DashboardPage = () => {
                         {columns.map((column) => {
                           const value = row[column.id];
                           return (
-                            <TableCell key={column.id} align={column.align}>
+                            <TableCell key={column.id} align={'left'}>
                               {column.format && typeof value === 'number'
                                 ? column.format(value)
                                 : value}
@@ -181,14 +208,31 @@ const DashboardPage = () => {
                           );
                         })}
                         <TableCell align={'center'}>
-                          <Link href={`/todos/${row.id}`}>View</Link>
-                          <Link href={`/todos/${row.id}/edit`}>Edit</Link>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() => handleOpenModal(Number(row.id))}>
-                            Delete
-                          </Button>
+                          <Box display="flex" gap={1}>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              component={Link}
+                              to={`/todos/${row.id}/edit`}>
+                              Edit
+                            </Button>
+                            <IconButton
+                              size="small"
+                              color="info"
+                              onClick={() => navigate(`/todos/${row.id}`)}
+                              sx={{ mr: 1 }}>
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <Tooltip title="Delete Todo">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                sx={{ mr: 1, textAlign: 'right' }}
+                                onClick={() => handleOpenModal(Number(row.id))}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
