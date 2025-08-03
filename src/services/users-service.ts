@@ -9,14 +9,22 @@ export const fetchUsers = (
   return api
     .get(
       filterValue && searchValue
-        ? `/auth/users/filter?limit=${rowsPerPage}&skip=${
-            rowsPerPage * page
-          }&key=${filterValue}&value=${searchValue}`
-        : `/auth/users?limit=${rowsPerPage}&skip=${rowsPerPage * page}`,
+        ? `/employees?filters[${filterValue}][$contains]=${searchValue}&pagination[page]=${page}&pagination[pageSize]=${rowsPerPage}`
+        : `/employees?pagination[page]=${page}&pagination[pageSize]=${rowsPerPage}`,
     )
     .then((res) => res.data);
 };
 
 export const fetchMyData = () => {
-  return api.get('/auth/user/me').then((res) => res.data);
+  return api
+    .get('/users/me', {
+      headers: {
+        Authorization: `Bearer ${
+          localStorage.getItem('access_token') ||
+          sessionStorage.getItem('access_token')
+        }`,
+      },
+    })
+    .then((res) => res.data);
 };
+

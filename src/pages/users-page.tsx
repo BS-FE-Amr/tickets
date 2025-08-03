@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FormControl,
   InputLabel,
@@ -25,6 +25,7 @@ import type {
 import DataDisplay from '../components/data-display';
 import { useQuery } from '@tanstack/react-query';
 import { fetchUsers } from '../services/users-service';
+import useDebounce from '../hooks/use-debounce';
 
 interface Column {
   id: 'id' | 'firstName' | 'lastName' | 'age';
@@ -35,22 +36,14 @@ interface Column {
 }
 
 const UsersPage = () => {
-  const [inputValue, setInputValue] = useState('');
-
   const { filterValue, setFilterValue, searchValue, setSearchValue } =
     useUsersContext();
+
+  const { inputValue, setInputValue } = useDebounce(setSearchValue);
 
   const handleChange = (event: SelectChangeEvent) => {
     setFilterValue(event.target.value as UsersFilterValue);
   };
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setSearchValue(inputValue);
-    }, 500);
-
-    return () => clearTimeout(timeout); // cleanup previous timeout
-  }, [inputValue, setSearchValue]);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -82,7 +75,7 @@ const UsersPage = () => {
 
   const rows = useMemo(() => {
     return (
-      data?.users?.map((user: UsersData) => {
+      data?.data?.map((user: UsersData) => {
         return createData(user?.id, user?.firstName, user?.lastName, user?.age);
       }) || []
     );
@@ -188,7 +181,7 @@ const UsersPage = () => {
             <TablePagination
               rowsPerPageOptions={[10, 25, 100]}
               component="div"
-              count={data?.total as number}
+              count={data?.meta.pagination.total as number}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}

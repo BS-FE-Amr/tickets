@@ -77,9 +77,33 @@ export type UsersData = Pick<
 >;
 
 export interface UsersResponse {
-  users: UsersFullData[];
-  total: number;
-  skip: number;
-  limit: number;
+  data: UsersFullData[];
+  meta: {
+    pagination: {
+      page: number;
+      pageSize: number;
+      pageCount: number;
+      total: number;
+    };
+  };
+}
+
+export type PersonalData = {
+  id: number;
+  documentId: string;
+  username: string;
+  email: string;
+  provider: string;
+  confirmed: boolean;
+  blocked: boolean;
+  createdAt: string;
+  publishedAt: string;
+  firstName: string;
+  lastName: string;
+};
+
+export interface PersonalDataToken {
+  jwt: string;
+  user: PersonalData;
 }
 

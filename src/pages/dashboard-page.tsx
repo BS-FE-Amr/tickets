@@ -1,9 +1,13 @@
 import {
   Box,
   Button,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
   Modal,
   Paper,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -11,12 +15,17 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  TextField,
   Typography,
+  type SelectChangeEvent,
 } from '@mui/material';
 import DataDisplay from '../components/data-display';
-import type { TodosData, TodosResponse } from '../types/todos.types';
+import type {
+  TodosData,
+  TodosFilterValue,
+  TodosResponse,
+} from '../types/todos.types';
 import { useMemo, useState } from 'react';
-import api from '../utils/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router';
@@ -24,6 +33,9 @@ import { Link, useNavigate } from 'react-router';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import { deleteTodo, fetchTodos } from '../services/todos-service-';
+import { useTodosContext } from '../contexts/todos-context';
+import useDebounce from '../hooks/use-debounce';
 
 interface Column {
   id: 'id' | 'todo' | 'completed' | 'userId';
@@ -38,12 +50,18 @@ const DashboardPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
-  const { data, error, isLoading } = useQuery({
-    queryKey: ['todos', page, rowsPerPage],
-    queryFn: () =>
-      api
-        .get(`/auth/todos?limit=${rowsPerPage}&skip=${rowsPerPage * page}`)
-        .then((res) => res.data),
+  const { filterValue, setFilterValue, searchValue, setSearchValue } =
+    useTodosContext();
+
+  const handleChange = (event: SelectChangeEvent) => {
+    setFilterValue(event.target.value as TodosFilterValue);
+  };
+
+  const { inputValue, setInputValue } = useDebounce(setSearchValue);
+
+  const { data, error, isLoading } = useQuery<TodosResponse>({
+    queryKey: ['todos', page, rowsPerPage, searchValue, filterValue],
+    queryFn: () => fetchTodos(searchValue, filterValue, page, rowsPerPage),
   });
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -62,8 +80,9 @@ const DashboardPage = () => {
     todo: string,
     completed: string,
     userId: string,
+    documentId: string,
   ): TodosData {
-    return { id, todo, completed, userId };
+    return { id, todo, completed, userId, documentId };
   }
 
   const columns: readonly Column[] = [
@@ -85,42 +104,38 @@ const DashboardPage = () => {
 
   const rows = useMemo(() => {
     return (
-      data?.todos?.map((todo: TodosData) => {
+      data?.data?.map((todo: TodosData) => {
         return createData(
           todo?.id,
           todo?.todo,
           todo?.completed ? '✅' : '❌',
           todo?.userId,
+          todo?.documentId,
         );
       }) || []
     );
   }, [data]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedRow, setSelectedRow] = useState<TodosData | null>(null);
 
-  const handleOpenModal = (id: number | null) => {
-    setSelectedId(id);
+  const handleOpenModal = (row: TodosData) => {
+    setSelectedRow(row);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    setSelectedId(null);
+    setSelectedRow(null);
     setIsModalOpen(false);
   };
 
-  const DeleteTodo = async () => {
-    const { data } = await api.delete(`/auth/todos/${selectedId}`);
-    return data;
-  };
-
   const { mutate, isPending } = useMutation({
-    mutationFn: DeleteTodo,
+    mutationFn: () => deleteTodo(String(selectedRow?.documentId)),
     onSuccess: (data) => {
       console.log(data);
       handleCloseModal();
       queryClient.invalidateQueries({ queryKey: ['todos'] });
-      toast.success(`Todo #${data.id} Deleted Successfully!`);
+      toast.success(`Todo Deleted Successfully!`);
     },
   });
 
@@ -158,9 +173,38 @@ const DashboardPage = () => {
         </Button>
       </Box>
 
+      <div className="flex gap-[24px] mb-[24px]">
+        {/* Users Search */}
+        <TextField
+          id="outlined-basic"
+          label="Search Query"
+          variant="outlined"
+          type="text"
+          name="search"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+
+        {/* Users Filter dropdown */}
+        <FormControl fullWidth>
+          <InputLabel id="demo-simple-select-label">Filter</InputLabel>
+          <Select
+            labelId="demo-simple-select-label"
+            id="demo-simple-select"
+            value={filterValue}
+            label="Filter"
+            onChange={handleChange}>
+            <MenuItem value={'id'}>Id</MenuItem>
+            <MenuItem value={'todo'}>Todo</MenuItem>
+            <MenuItem value={'completed'}>Completed</MenuItem>
+            <MenuItem value={'userId'}>User Id</MenuItem>
+          </Select>
+        </FormControl>
+      </div>
+
       <div className="mt-[24px] ">
         {/* Todos Table */}
-        <DataDisplay<TodosResponse | null>
+        <DataDisplay<TodosResponse | undefined>
           data={data}
           error={error?.message}
           isLoading={isLoading}>
@@ -213,13 +257,15 @@ const DashboardPage = () => {
                               variant="outlined"
                               color="primary"
                               component={Link}
-                              to={`/todos/${row.id}/edit`}>
+                              to={`/todos/${row.documentId}/edit`}>
                               Edit
                             </Button>
                             <IconButton
                               size="small"
                               color="info"
-                              onClick={() => navigate(`/todos/${row.id}`)}
+                              onClick={() =>
+                                navigate(`/todos/${row.documentId}`)
+                              }
                               sx={{ mr: 1 }}>
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
@@ -228,7 +274,7 @@ const DashboardPage = () => {
                                 size="small"
                                 color="error"
                                 sx={{ mr: 1, textAlign: 'right' }}
-                                onClick={() => handleOpenModal(Number(row.id))}>
+                                onClick={() => handleOpenModal(row)}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
@@ -243,7 +289,7 @@ const DashboardPage = () => {
             <TablePagination
               rowsPerPageOptions={[10, 25, 100]}
               component="div"
-              count={data?.total as number}
+              count={data?.meta.pagination.total as number}
               rowsPerPage={rowsPerPage}
               page={page}
               onPageChange={handleChangePage}
@@ -258,7 +304,7 @@ const DashboardPage = () => {
             aria-describedby="modal-description">
             <Box sx={style}>
               <Typography variant="h5" fontWeight="bold">
-                Are you sure you want to delete todo #{selectedId}
+                Are you sure you want to delete todo #{selectedRow?.todo}
               </Typography>
 
               <div className="flex justify-between">

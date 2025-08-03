@@ -8,14 +8,14 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Logout from '@mui/icons-material/Logout';
-import type { UsersFullData } from '../types/users.types';
+import type { PersonalData } from '../types/users.types';
 import { useQuery } from '@tanstack/react-query';
 import DataDisplay from './data-display';
 import { useNavigate } from 'react-router';
 import { fetchMyData } from '../services/users-service';
 
 export default function AccountMenu() {
-  const { data, error, isLoading } = useQuery<UsersFullData>({
+  const { data, error, isLoading } = useQuery<PersonalData>({
     queryKey: ['me'],
     queryFn: fetchMyData,
   });
@@ -39,7 +39,7 @@ export default function AccountMenu() {
   };
   return (
     <React.Fragment>
-      <DataDisplay<UsersFullData | undefined>
+      <DataDisplay<PersonalData | undefined>
         data={data}
         error={error?.message}
         isLoading={isLoading}>
@@ -54,8 +54,8 @@ export default function AccountMenu() {
               aria-haspopup="true"
               aria-expanded={open ? 'true' : undefined}>
               <Avatar sx={{ width: 32, height: 32 }}>
-                {data?.firstName[0]}
-                {data?.lastName[0]}
+                {String(data?.firstName[0]).toUpperCase()}
+                {String(data?.lastName[0]).toUpperCase()}
               </Avatar>
             </IconButton>
           </Tooltip>

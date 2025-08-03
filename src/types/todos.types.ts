@@ -1,15 +1,27 @@
+export type TodosFilterValue = 'completed' | 'todo' | 'userId' | 'id';
+
 export interface TodosData {
   id: string;
   todo: string;
   completed: string;
   userId: string;
+  documentId: string;
+}
+
+export interface TodoItemResponse {
+  data: TodosData;
 }
 
 export interface TodosResponse {
-  todos: TodosData[];
-  total: number;
-  skip: number;
-  limit: number;
+  data: TodosData[];
+  meta: {
+    pagination: {
+      page: number;
+      pageSize: number;
+      pageCount: number;
+      total: number;
+    };
+  };
 }
 
 export interface TodosNewData {
@@ -17,3 +29,4 @@ export interface TodosNewData {
   completed: string;
   userId: string;
 }
+

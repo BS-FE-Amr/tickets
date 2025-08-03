@@ -5,6 +5,7 @@ import UsersProvider from '../providers/users-provider';
 import { Suspense, lazy } from 'react';
 import Loading from '../components/loading';
 import DashboardPage from '../pages/dashboard-page';
+import TodosProvider from '../providers/todo-provider';
 
 const LazyEditTodo = lazy(() => import('../pages/todos/edit-todo'));
 const LazyNewTodo = lazy(() => import('../pages/todos/new-todo'));
@@ -19,7 +20,14 @@ const AppRoutes = () => {
       <Routes>
         <Route element={<ProtectedRoute />}>
           <Route element={<Navbar />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <TodosProvider>
+                  <DashboardPage />
+                </TodosProvider>
+              }
+            />
             <Route
               path="/todos/new"
               element={

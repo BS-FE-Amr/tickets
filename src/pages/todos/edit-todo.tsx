@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
-import type { TodosData, TodosNewData } from '../../types/todos.types';
+import type { TodoItemResponse, TodosNewData } from '../../types/todos.types';
 import DataDisplay from '../../components/data-display';
 import toast from 'react-hot-toast';
 import TodoForm from '../../components/todo-form';
@@ -11,7 +11,7 @@ const EditTodoPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const { data, error, isLoading } = useQuery<TodosData>({
+  const { data, error, isLoading } = useQuery<TodoItemResponse>({
     queryKey: ['todos', id],
     queryFn: () => fetchTodo(String(id)),
   });
@@ -20,16 +20,16 @@ const EditTodoPage = () => {
     mutationFn: ({ todo, completed, userId }: TodosNewData) =>
       updateTodo(String(id), { todo, completed, userId }),
     onSuccess: (data) => {
-      console.log(data);
+      console.log(data.data.documentId);
       queryClient.invalidateQueries({ queryKey: ['todos'] });
-      toast.success(`Todo #${data.id} Edited Successfully!`);
-      navigate(`/todos/${data.id}`);
+      toast.success(`Todo #${data.data.documentId} Edited Successfully!`);
+      navigate(`/todos/${data.data.documentId}`);
     },
   });
 
   return (
     <div className="container">
-      <DataDisplay<TodosData | undefined>
+      <DataDisplay<TodoItemResponse | undefined>
         data={data}
         error={error?.message}
         isLoading={isLoading}>
@@ -39,9 +39,9 @@ const EditTodoPage = () => {
           isPending={isPending}
           mutate={mutate}
           defaultValues={{
-            todo: String(data?.todo),
-            completed: Boolean(data?.completed),
-            userId: String(data?.userId),
+            todo: String(data?.data.todo),
+            completed: Boolean(data?.data.completed),
+            userId: String(data?.data.userId),
           }}
           externalLink={`/todos/${id}`}
           externalText="View"

@@ -29,10 +29,9 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const loginUser = async () => {
-    const { data } = await api.post('/auth/login', {
-      username: formData.username,
+    const { data } = await api.post('/auth/local', {
+      identifier: formData.username,
       password: formData.password,
-      expiresInMins: 1,
     });
     return data;
   };
@@ -41,10 +40,10 @@ const LoginPage = () => {
     mutationFn: () => loginUser(),
     onSuccess: (data) => {
       if (formData.remember) {
-        localStorage.setItem('access_token', data?.accessToken);
+        localStorage.setItem('access_token', data?.jwt);
         localStorage.setItem('refresh_token', data?.refreshToken);
       } else {
-        sessionStorage.setItem('access_token', data?.accessToken);
+        sessionStorage.setItem('access_token', data?.jwt);
         sessionStorage.setItem('refresh_token', data?.refreshToken);
       }
       navigate('/dashboard');
@@ -114,8 +113,6 @@ const LoginPage = () => {
       return;
     }
 
-    localStorage.setItem('token', 'loggedIn');
-    console.log('B?');
     mutate();
   };
 
@@ -144,7 +141,7 @@ const LoginPage = () => {
               <div className="py-[24px] flex flex-col gap-[24px] ">
                 <TextField
                   id="outlined-basic"
-                  label="User Name"
+                  label="Username"
                   variant="outlined"
                   type="text"
                   name="username"

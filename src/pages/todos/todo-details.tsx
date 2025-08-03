@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { TodosData } from '../../types/todos.types';
+import type { TodoItemResponse } from '../../types/todos.types';
 import { useParams } from 'react-router';
 import DataDisplay from '../../components/data-display';
 import { Box, Link, Paper, Typography } from '@mui/material';
@@ -8,13 +8,13 @@ import { fetchTodo } from '../../services/todos-service-';
 const TodoDetails = () => {
   const { id } = useParams();
 
-  const { data, error, isLoading } = useQuery<TodosData>({
+  const { data, error, isLoading } = useQuery<TodoItemResponse>({
     queryKey: ['todos', id],
     queryFn: () => fetchTodo(String(id)),
   });
 
   return (
-    <DataDisplay<TodosData | undefined>
+    <DataDisplay<TodoItemResponse | undefined>
       data={data}
       error={error?.message}
       isLoading={isLoading}>
@@ -31,22 +31,22 @@ const TodoDetails = () => {
               <div className="mt-[24px]">
                 <div className="flex gap-[16px] ">
                   <Typography variant="body1">Id:</Typography>
-                  <Typography variant="body1">{data?.id}</Typography>
+                  <Typography variant="body1">{data?.data.id}</Typography>
                 </div>
 
                 <div className="flex gap-[16px] ">
                   <Typography variant="body1">Todo:</Typography>
-                  <Typography variant="body1">{data?.todo}</Typography>
+                  <Typography variant="body1">{data?.data.todo}</Typography>
                 </div>
                 <div className="flex gap-[16px] ">
                   <Typography variant="body1">Completed:</Typography>
                   <Typography variant="body1">
-                    {data?.completed ? 'True' : 'False'}
+                    {data?.data.completed ? '✅' : '❌'}
                   </Typography>
                 </div>
                 <div className="flex gap-[16px] ">
                   <Typography variant="body1">UserId:</Typography>
-                  <Typography variant="body1">{data?.userId}</Typography>
+                  <Typography variant="body1">{data?.data.userId}</Typography>
                 </div>
               </div>
             </Paper>
