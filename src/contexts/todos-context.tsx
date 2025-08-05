@@ -2,9 +2,11 @@ import { createContext, useContext } from 'react';
 import type { TodosFilterValue } from '../types/todos.types';
 
 export type TodosContextType = {
-  searchValue: string;
+  searchValue: string | boolean | number;
   filterValue: TodosFilterValue;
-  setSearchValue: React.Dispatch<React.SetStateAction<string>>;
+  setSearchValue: React.Dispatch<
+    React.SetStateAction<string | boolean | number>
+  >;
   setFilterValue: React.Dispatch<React.SetStateAction<TodosFilterValue>>;
 };
 

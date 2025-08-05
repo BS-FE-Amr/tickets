@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 
-const useDebounce = (
-  setSearchValue: React.Dispatch<React.SetStateAction<string>>,
+const useDebounce = <T>(
+  setSearchValue: React.Dispatch<React.SetStateAction<T>>,
+  inititalValue: T,
 ) => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState<T>(inititalValue);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
+      console.log('INPUT VALUE', inputValue, typeof inputValue);
       setSearchValue(inputValue);
     }, 500);
 

@@ -3,8 +3,8 @@ import type { UsersFilterValue } from '../types/users.types';
 import { UsersContext } from '../contexts/users-context';
 
 const UsersProvider = ({ children }: { children: React.ReactNode }) => {
-  const [searchValue, setSearchValue] = useState('');
-  const [filterValue, setFilterValue] = useState<UsersFilterValue>('id');
+  const [searchValue, setSearchValue] = useState<number | string>('');
+  const [filterValue, setFilterValue] = useState<UsersFilterValue>('firstName');
 
   return (
     <UsersContext.Provider

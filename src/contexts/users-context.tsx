@@ -2,9 +2,9 @@ import { createContext, useContext } from 'react';
 import type { UsersFilterValue } from '../types/users.types';
 
 export type UsersContextType = {
-  searchValue: string;
+  searchValue: string | number;
   filterValue: UsersFilterValue;
-  setSearchValue: React.Dispatch<React.SetStateAction<string>>;
+  setSearchValue: React.Dispatch<React.SetStateAction<string | number>>;
   setFilterValue: React.Dispatch<React.SetStateAction<UsersFilterValue>>;
 };
 

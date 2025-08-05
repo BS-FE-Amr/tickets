@@ -27,6 +27,8 @@ type TodoFormProps = {
   isPending: boolean;
   externalText?: string;
   externalLink?: string;
+  type: 'edit' | 'new';
+  id?: string;
 };
 
 const TodoForm: FC<TodoFormProps> = ({
@@ -37,6 +39,8 @@ const TodoForm: FC<TodoFormProps> = ({
   isPending,
   externalText,
   externalLink,
+  type,
+  id,
 }) => {
   return (
     <div className="mt-[24px]">
@@ -54,12 +58,23 @@ const TodoForm: FC<TodoFormProps> = ({
             <Formik
               initialValues={defaultValues}
               validationSchema={TodoSchema}
-              onSubmit={(values) => {
-                mutate({
-                  todo: values.todo,
-                  completed: String(values.completed),
-                  userId: values.userId,
+              onSubmit={async (values) => {
+                await mutate({
+                  variables: {
+                    ...(type === 'edit' && { documentId: id }),
+                    data: {
+                      todo: values.todo,
+                      completed: values.completed,
+                      userId: values.userId,
+                    },
+                  },
                 });
+
+                // mutate({
+                //   todo: values.todo,
+                //   completed: String(values.completed),
+                //   userId: values.userId,
+                // });
               }}>
               {({ values, handleChange, handleBlur, touched, errors }) => (
                 <Form>

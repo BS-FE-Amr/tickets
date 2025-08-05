@@ -3,30 +3,30 @@ import { useParams } from 'react-router';
 import DataDisplay from '../../components/data-display';
 import { Box, Paper, Typography } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { FETCH_TODO } from '../../services/todos-service-gql';
-import type { TodoItemResponse } from '../../types/todos-gql.types';
+import { FETCH_USER } from '../../services/users-service-gql';
+import type { UserItemResponse } from '../../types/users-gql.types';
 
-const TodoDetails = ({ todoId }: { todoId?: string }) => {
+const UserDetails = ({ userId }: { userId?: string }) => {
   const { id } = useParams();
-  const todoFinalId = todoId || id;
+  const userFinalId = userId || id;
 
-  // const { data, error, isLoading } = useQuery<TodoItemResponse>({
-  //   queryKey: ['todos', id],
-  //   queryFn: () => fetchTodo(String(id)),
+  // const { data, error, isLoading } = useQuery<UserItemResponse>({
+  //   queryKey: ['users', id],
+  //   queryFn: () => fetchUser(String(id)),
   // });
 
   const {
     data,
     error,
     loading: isLoading,
-  } = useQuery<TodoItemResponse>(FETCH_TODO, {
+  } = useQuery<UserItemResponse>(FETCH_USER, {
     variables: {
-      documentId: todoFinalId,
+      documentId: userFinalId,
     },
   });
 
   return (
-    <DataDisplay<TodoItemResponse | undefined>
+    <DataDisplay<UserItemResponse | undefined>
       data={data}
       error={error?.message}
       isLoading={isLoading}>
@@ -36,31 +36,34 @@ const TodoDetails = ({ todoId }: { todoId?: string }) => {
             <Paper elevation={3} sx={{ p: 4 }}>
               <div className="flex justify-between items-center">
                 <Typography variant="h5" fontWeight="bold">
-                  Todo
+                  User
                 </Typography>
-                {/* <Link href={`/todos/${todoFinalId}/edit`}>Edit</Link> */}
+                {/* <Link href={`/users/${userFinalId}/edit`}>Edit</Link> */}
               </div>
               <div className="mt-[24px]">
                 <div className="flex gap-[16px] ">
                   <Typography variant="body1">Id:</Typography>
                   <Typography variant="body1">
-                    {data?.todo.documentId}
+                    {data?.employee.documentId}
                   </Typography>
                 </div>
 
                 <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Todo:</Typography>
-                  <Typography variant="body1">{data?.todo.todo}</Typography>
-                </div>
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Completed:</Typography>
+                  <Typography variant="body1">First Name:</Typography>
                   <Typography variant="body1">
-                    {data?.todo.completed ? 'True' : 'False'}
+                    {data?.employee.firstName}
                   </Typography>
                 </div>
                 <div className="flex gap-[16px] ">
-                  <Typography variant="body1">UserId:</Typography>
-                  <Typography variant="body1">{data?.todo.userId}</Typography>
+                  <Typography variant="body1">Last Name:</Typography>
+                  <Typography variant="body1">
+                    {data?.employee.lastName}
+                  </Typography>
+                </div>
+
+                <div className="flex gap-[16px] ">
+                  <Typography variant="body1">Age:</Typography>
+                  <Typography variant="body1">{data?.employee.age}</Typography>
                 </div>
               </div>
             </Paper>
@@ -71,5 +74,5 @@ const TodoDetails = ({ todoId }: { todoId?: string }) => {
   );
 };
 
-export default TodoDetails;
+export default UserDetails;
 

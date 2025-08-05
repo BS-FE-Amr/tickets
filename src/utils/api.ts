@@ -10,16 +10,16 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (
-      config.url?.includes('/auth/local') ||
-      config.url?.includes('/users/me')
+      config.url?.includes('/auth/local')
+      // ||
+      // config.url?.includes('/users/me')
     ) {
       return config;
     }
 
     const token =
-      'b8f85935a7540735a2035e6a2ea24036666a868304890a74161cbe5e3ae044b6c873bc480ceef516e2c9a222e1080c4d0aca61ca38cce01bf63531eaa0c21f4a92d405359d7746b7cdb4e29ad484806606a5b61069b44ba666aa2340a6285b52938dd435d88ab5cc4e7473f59c3e095f9d28735ea8cc2d57739ed2374bcabed8';
-    // localStorage.getItem('access_token') ||
-    // sessionStorage.getItem('access_token');
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

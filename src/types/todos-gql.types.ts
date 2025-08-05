@@ -1,21 +1,20 @@
 export type TodosFilterValue = 'completed' | 'todo' | 'userId';
 
 export interface TodosData {
-  id: string;
   todo: string;
-  completed: string;
-  userId: string;
+  completed: boolean;
+  userId: number;
   documentId: string;
 }
 
 export interface TodoItemResponse {
-  data: TodosData;
+  todo: TodosData;
 }
 
 export interface TodosResponse {
-  data: TodosData[];
-  meta: {
-    pagination: {
+  todos_connection: {
+    nodes: TodosData[];
+    pageInfo: {
       page: number;
       pageSize: number;
       pageCount: number;
@@ -26,7 +25,7 @@ export interface TodosResponse {
 
 export interface TodosNewData {
   todo: string;
-  completed: string;
-  userId: string;
+  completed: boolean;
+  userId: number | null;
 }
 

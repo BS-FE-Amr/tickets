@@ -18,12 +18,12 @@ export const fetchUsers = (
 export const fetchMyData = () => {
   return api
     .get('/users/me', {
-      headers: {
-        Authorization: `Bearer ${
-          localStorage.getItem('access_token') ||
-          sessionStorage.getItem('access_token')
-        }`,
-      },
+      // headers: {
+      //   Authorization: `Bearer ${
+      //     localStorage.getItem('access_token') ||
+      //     sessionStorage.getItem('access_token')
+      //   }`,
+      // },
     })
     .then((res) => res.data);
 };

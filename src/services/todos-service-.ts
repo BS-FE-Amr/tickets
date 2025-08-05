@@ -50,5 +50,3 @@ export const deleteTodo = async (documentId: string) => {
   return data;
 };
 
-// pie Chart - mui
-
