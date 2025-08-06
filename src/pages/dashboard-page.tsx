@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -22,6 +23,7 @@ import {
 import DataDisplay from '../components/data-display';
 import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
+import * as Yup from 'yup';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import Tooltip from '@mui/material/Tooltip';
@@ -37,13 +39,13 @@ import {
   UPDATE_TODO,
 } from '../services/todos-service-gql';
 import type {
-  TodosNewData,
   TodosResponse,
   TodosData,
   TodosFilterValue,
 } from '../types/todos-gql.types';
 import type { FetchPaginatedFilteredSearch } from '../types/general.types';
 import TodoDetails from './todos/todo-details';
+import { Form, Formik } from 'formik';
 
 interface Column {
   id: 'todo' | 'completed' | 'userId';
@@ -99,19 +101,29 @@ const DashboardPage = () => {
     }
   }, [searchValue]);
 
+  const queryVariables = useMemo(
+    () => ({
+      page: page + 1,
+      pageSize: rowsPerPage,
+      filters,
+    }),
+    [page, rowsPerPage, filters],
+  );
+
+  useEffect(() => {
+    console.log('Page changed to:', page);
+  }, [page]);
+
   const {
     data,
     error,
     loading: isLoading,
   } = useQuery<TodosResponse, FetchPaginatedFilteredSearch>(FETCH_TODOS, {
-    variables: {
-      page: page,
-      pageSize: rowsPerPage,
-      filters: filters,
-    },
+    variables: queryVariables,
   });
 
   const handleChangePage = (_event: unknown, newPage: number) => {
+    console.log('newPage', newPage);
     setPage(newPage);
   };
 
@@ -133,7 +145,7 @@ const DashboardPage = () => {
 
   const columns: readonly Column[] = [
     // { id: 'id', label: 'Id', minWidth: 170 },
-    { id: 'todo', label: 'Todo', minWidth: 100 },
+    { id: 'todo', label: 'Todo', minWidth: 170 },
     {
       id: 'completed',
       label: 'Completed',
@@ -154,7 +166,7 @@ const DashboardPage = () => {
         return createData(
           todo?.todo,
           todo?.completed,
-          todo?.userId,
+          Number(todo?.userId),
           todo?.documentId,
         );
       }) || []
@@ -200,7 +212,7 @@ const DashboardPage = () => {
     p: 4,
   };
 
-  const [newTodo, setNewTodo] = useState<null | TodosNewData>(null);
+  const [isNewTodo, setIsNewTodo] = useState<boolean>(false);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editedRow, setEditedRow] = useState<Partial<TodosData>>({});
   const [modalType, setModalType] = useState<null | 'view' | 'delete'>(null);
@@ -213,7 +225,9 @@ const DashboardPage = () => {
   ] = useMutation(CREATE_TODO, {
     refetchQueries: ['GetTodos'],
     onCompleted: () => {
-      setNewTodo(null);
+      setIsNewTodo(false);
+      setEditedRow({});
+      setEditRowId(null);
       toast.success(`New Todo Added Successfully!`);
     },
     onError: () => {
@@ -232,8 +246,7 @@ const DashboardPage = () => {
           variables: { documentId: editRowId },
         },
       ],
-      onCompleted: (data) => {
-        console.log(data);
+      onCompleted: () => {
         toast.success(`Todo Updated Successfully!`);
       },
       onError: () => {
@@ -255,6 +268,30 @@ const DashboardPage = () => {
   const isBoolean = filterValue === 'completed';
   const isNumber = filterValue === 'userId';
 
+  const validationSchema = Yup.object({
+    completed: Yup.boolean().required('Completed State is required'),
+    userId: Yup.string().required('User Id is required'),
+    todo: Yup.string().required('Todo is required'),
+  });
+
+  const handleUpdateTodo = async (values: Partial<TodosData>) => {
+    await updateTodoMutation({
+      variables: {
+        documentId: editRowId,
+        data: values,
+      },
+    });
+    setEditRowId(null);
+    setEditedRow({});
+  };
+
+  const handleCreateTodo = async (values: Partial<TodosData>) =>
+    await createTodoMutation({
+      variables: {
+        data: values,
+      },
+    });
+
   return (
     <div className="container mt-[24px]">
       {/* Todos Header */}
@@ -269,13 +306,15 @@ const DashboardPage = () => {
         <Button
           variant="contained"
           color="primary"
-          disabled={!!newTodo}
+          disabled={isNewTodo}
           onClick={() => {
-            setNewTodo({
+            setEditRowId(null);
+            setEditedRow({
               todo: '',
               completed: false,
               userId: null,
             });
+            setIsNewTodo(true);
           }}>
           Add New Todo
         </Button>
@@ -307,6 +346,7 @@ const DashboardPage = () => {
           </FormControl>
         ) : (
           <TextField
+            fullWidth
             id="outlined-basic"
             label="Search Query"
             variant="outlined"
@@ -326,7 +366,7 @@ const DashboardPage = () => {
         )}
 
         {/* Users Filter dropdown */}
-        <FormControl fullWidth>
+        <FormControl sx={{ width: '240px' }}>
           <InputLabel id="demo-simple-select-label">Filter</InputLabel>
           <Select
             labelId="demo-simple-select-label"
@@ -347,254 +387,305 @@ const DashboardPage = () => {
           data={data}
           error={error?.message}
           isLoading={isLoading}>
-          <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-            <TableContainer sx={{ maxHeight: 440 }}>
-              <Table stickyHeader aria-label="sticky table">
-                <TableHead>
-                  <TableRow>
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.id}
-                        align={'left'}
-                        style={{
-                          minWidth: column.minWidth,
-                          fontWeight: 'bold',
-                        }}>
-                        {column.label}
-                      </TableCell>
-                    ))}
-                    <TableCell
-                      align={'left'}
-                      style={{
-                        fontWeight: 'bold',
-                      }}>
-                      {'Actions'}
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((row: TodosData) => {
-                    const isEditing = editRowId === row.documentId;
-
-                    return (
-                      <TableRow
-                        hover
-                        role="checkbox"
-                        tabIndex={-1}
-                        key={row.documentId}>
-                        {columns.map((column) => {
-                          const value = row[column.id];
-                          const editedValue = editedRow[column.id];
-                          const isBoolean = typeof value === 'boolean';
+          <Formik
+            initialValues={editedRow}
+            onSubmit={async (values) => {
+              if (isNewTodo) {
+                handleCreateTodo(values);
+              } else {
+                handleUpdateTodo(values);
+              }
+            }}
+            enableReinitialize
+            validationSchema={validationSchema}>
+            {({
+              handleSubmit,
+              handleChange,
+              values,
+              errors,
+              touched,
+              handleBlur,
+            }) => (
+              <Form>
+                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                  <TableContainer sx={{ maxHeight: 440 }}>
+                    <Table
+                      stickyHeader
+                      aria-label="sticky table"
+                      sx={{ tableLayout: 'fixed', width: '100%' }}>
+                      <TableHead>
+                        <TableRow>
+                          {columns.map((column) => (
+                            <TableCell
+                              key={column.id}
+                              align={'left'}
+                              style={{
+                                minWidth: column.minWidth,
+                                fontWeight: 'bold',
+                              }}>
+                              {column.label}
+                            </TableCell>
+                          ))}
+                          <TableCell
+                            align={'left'}
+                            style={{
+                              fontWeight: 'bold',
+                              width: '240px',
+                            }}>
+                            {'Actions'}
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {rows.map((row: TodosData) => {
+                          const isEditing = editRowId === row.documentId;
 
                           return (
-                            <TableCell key={column.id} align="left">
-                              {isEditing ? (
-                                isBoolean ? (
-                                  <Select
-                                    value={
-                                      editedValue ?? value ? 'true' : 'false'
-                                    }
-                                    onChange={(e) =>
-                                      setEditedRow((prev) => ({
-                                        ...prev,
-                                        [column.id]: e.target.value === 'true',
-                                      }))
-                                    }
-                                    variant="standard"
-                                    fullWidth>
-                                    <MenuItem value="true">True</MenuItem>
-                                    <MenuItem value="false">False</MenuItem>
-                                  </Select>
-                                ) : (
-                                  <TextField
-                                    value={editedValue ?? value}
-                                    onChange={(e) =>
-                                      setEditedRow((prev) => ({
-                                        ...prev,
-                                        [column.id]:
-                                          typeof value === 'number'
-                                            ? Number(e.target.value)
-                                            : e.target.value,
-                                      }))
-                                    }
-                                    variant="standard"
-                                    type={
-                                      typeof value === 'number'
-                                        ? 'number'
-                                        : 'text'
-                                    }
-                                    fullWidth
-                                  />
-                                )
-                              ) : column.format && typeof value === 'number' ? (
-                                column.format(value)
-                              ) : (
-                                String(value)
-                              )}
-                            </TableCell>
+                            <TableRow
+                              hover
+                              role="checkbox"
+                              tabIndex={-1}
+                              key={row.documentId}>
+                              {columns.map((column) => {
+                                const value = row[column.id];
+                                const isBoolean = typeof value === 'boolean';
+
+                                console.log('VALUES', values);
+
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    align="left"
+                                    style={{
+                                      minWidth: column.minWidth,
+                                    }}>
+                                    {isEditing ? (
+                                      isBoolean ? (
+                                        <FormControl fullWidth>
+                                          <Select
+                                            name="completed"
+                                            value={
+                                              values.completed
+                                                ? 'true'
+                                                : 'false'
+                                            }
+                                            error={
+                                              touched.completed &&
+                                              Boolean(errors.completed)
+                                            }
+                                            onBlur={handleBlur}
+                                            onChange={handleChange}
+                                            variant="standard"
+                                            fullWidth>
+                                            <MenuItem value="true">
+                                              True
+                                            </MenuItem>
+                                            <MenuItem value="false">
+                                              False
+                                            </MenuItem>
+                                          </Select>
+                                          {touched.completed &&
+                                            errors.completed && (
+                                              <FormHelperText>
+                                                {errors.completed}
+                                              </FormHelperText>
+                                            )}
+                                        </FormControl>
+                                      ) : (
+                                        <TextField
+                                          name={column.id}
+                                          value={values[column.id]}
+                                          onChange={handleChange}
+                                          variant="standard"
+                                          error={
+                                            touched[column.id] &&
+                                            Boolean(errors[column.id])
+                                          }
+                                          helperText={
+                                            touched[column.id] &&
+                                            errors[column.id]
+                                          }
+                                          onBlur={handleBlur}
+                                          type={
+                                            typeof value === 'number'
+                                              ? 'number'
+                                              : 'text'
+                                          }
+                                          fullWidth
+                                        />
+                                      )
+                                    ) : column.format &&
+                                      typeof value === 'number' ? (
+                                      column.format(value)
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+
+                              <TableCell
+                                align="left"
+                                style={{
+                                  fontWeight: 'bold',
+                                  width: '240px',
+                                }}>
+                                <Box display="flex" gap={1}>
+                                  {isEditing ? (
+                                    <>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        disabled={isUpdating}
+                                        type="button"
+                                        onClick={() => handleSubmit()}>
+                                        Update
+                                      </Button>
+                                      <Button
+                                        color="primary"
+                                        disabled={isUpdating}
+                                        onClick={() => {
+                                          setEditRowId(null);
+                                          setEditedRow({});
+                                        }}>
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        type="button"
+                                        onClick={() => {
+                                          setEditRowId(row.documentId);
+                                          setEditedRow({
+                                            todo: row.todo,
+                                            userId: row.userId,
+                                            completed: row.completed,
+                                          });
+                                          setIsNewTodo(false);
+                                        }}>
+                                        Edit
+                                      </Button>
+                                      <IconButton
+                                        size="small"
+                                        color="info"
+                                        onClick={() =>
+                                          handleOpenModal(row, 'view')
+                                        }>
+                                        <VisibilityIcon fontSize="small" />
+                                      </IconButton>
+                                      <Tooltip title="Delete Todo">
+                                        <IconButton
+                                          size="small"
+                                          color="error"
+                                          onClick={() =>
+                                            handleOpenModal(row, 'delete')
+                                          }>
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
                           );
                         })}
+                        {isNewTodo && (
+                          <TableRow hover role="checkbox" tabIndex={-1}>
+                            {columns.map((column) => {
+                              const value = editedRow[column.id];
+                              const isBoolean = typeof value === 'boolean';
 
-                        <TableCell align="center">
-                          <Box display="flex" gap={1}>
-                            {isEditing ? (
-                              <>
+                              return (
+                                <TableCell key={column.id} align="left">
+                                  {isBoolean ? (
+                                    <FormControl fullWidth>
+                                      <Select
+                                        onChange={handleChange}
+                                        fullWidth
+                                        name="completed"
+                                        value={
+                                          values.completed ? 'true' : 'false'
+                                        }
+                                        error={
+                                          touched.completed &&
+                                          Boolean(errors.completed)
+                                        }
+                                        onBlur={handleBlur}
+                                        variant="standard">
+                                        <MenuItem value="true">True</MenuItem>
+                                        <MenuItem value="false">False</MenuItem>
+                                      </Select>
+                                      {touched.completed &&
+                                        errors.completed && (
+                                          <FormHelperText>
+                                            {errors.completed}
+                                          </FormHelperText>
+                                        )}
+                                    </FormControl>
+                                  ) : (
+                                    <TextField
+                                      variant="standard"
+                                      fullWidth
+                                      name={column.id}
+                                      value={values[column.id]}
+                                      error={
+                                        touched[column.id] &&
+                                        Boolean(errors[column.id])
+                                      }
+                                      onBlur={handleBlur}
+                                      onChange={handleChange}
+                                      helperText={
+                                        touched[column.id] && errors[column.id]
+                                      }
+                                      type={
+                                        typeof value === 'number'
+                                          ? 'number'
+                                          : 'text'
+                                      }
+                                    />
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell align={'center'}>
+                              <Box display="flex" gap={1}>
                                 <Button
-                                  variant="outlined"
                                   color="primary"
-                                  disabled={isUpdating}
-                                  onClick={async () => {
-                                    await updateTodoMutation({
-                                      variables: {
-                                        documentId: editRowId,
-                                        data: editedRow,
-                                      },
-                                    });
-                                    setEditRowId(null);
-                                    setEditedRow({});
-                                  }}>
-                                  Update
+                                  variant="outlined"
+                                  disabled={isCreating}
+                                  type="submit">
+                                  Create
                                 </Button>
                                 <Button
                                   color="primary"
-                                  disabled={isUpdating}
-                                  onClick={() => {
-                                    setEditRowId(null);
-                                    setEditedRow({});
-                                  }}>
+                                  disabled={isCreating}
+                                  onClick={() => setIsNewTodo(false)}>
                                   Cancel
                                 </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  onClick={() => {
-                                    setEditRowId(row.documentId);
-                                    setEditedRow({
-                                      todo: row.todo,
-                                      userId: row.userId,
-                                      completed: row.completed,
-                                    });
-                                  }}>
-                                  Edit
-                                </Button>
-                                <IconButton
-                                  size="small"
-                                  color="info"
-                                  onClick={() => handleOpenModal(row, 'view')}>
-                                  <VisibilityIcon fontSize="small" />
-                                </IconButton>
-                                <Tooltip title="Delete Todo">
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() =>
-                                      handleOpenModal(row, 'delete')
-                                    }>
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {newTodo && (
-                    <TableRow hover role="checkbox" tabIndex={-1}>
-                      {columns.map((column) => {
-                        const value = newTodo[column.id];
-                        const isBoolean = typeof value === 'boolean';
-
-                        return (
-                          <TableCell key={column.id} align="left">
-                            {isBoolean ? (
-                              <Select
-                                value={value ? 'true' : 'false'}
-                                onChange={(e) =>
-                                  setNewTodo((prev) =>
-                                    !prev
-                                      ? prev
-                                      : {
-                                          ...prev,
-                                          [column.id]:
-                                            e.target.value === 'true',
-                                        },
-                                  )
-                                }
-                                fullWidth
-                                variant="standard">
-                                <MenuItem value="true">True</MenuItem>
-                                <MenuItem value="false">False</MenuItem>
-                              </Select>
-                            ) : (
-                              <TextField
-                                variant="standard"
-                                fullWidth
-                                type={
-                                  typeof value === 'number' ? 'number' : 'text'
-                                }
-                                value={value}
-                                onChange={(e) =>
-                                  setNewTodo((prev) =>
-                                    !prev
-                                      ? prev
-                                      : {
-                                          ...prev,
-                                          [column.id]:
-                                            typeof value === 'number'
-                                              ? Number(e.target.value)
-                                              : e.target.value,
-                                        },
-                                  )
-                                }
-                              />
-                            )}
-                          </TableCell>
-                        );
-                      })}
-                      <TableCell align={'center'}>
-                        <Box display="flex" gap={1}>
-                          <Button
-                            color="primary"
-                            variant="outlined"
-                            disabled={isCreating}
-                            onClick={async () =>
-                              await createTodoMutation({
-                                variables: {
-                                  data: newTodo,
-                                },
-                              })
-                            }>
-                            Create
-                          </Button>
-                          <Button
-                            color="primary"
-                            disabled={isCreating}
-                            onClick={() => setNewTodo(null)}>
-                            Cancel
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 100]}
-              component="div"
-              count={data?.todos_connection?.pageInfo?.total as number}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-          </Paper>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <TablePagination
+                    rowsPerPageOptions={[10, 25, 100]}
+                    component="div"
+                    count={data?.todos_connection?.pageInfo?.total as number}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </Paper>
+              </Form>
+            )}
+          </Formik>
 
           <Modal
             open={isModalOpen}

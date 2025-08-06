@@ -3,7 +3,7 @@ export type TodosFilterValue = 'completed' | 'todo' | 'userId';
 export interface TodosData {
   todo: string;
   completed: boolean;
-  userId: number;
+  userId: number | null;
   documentId: string;
 }
 

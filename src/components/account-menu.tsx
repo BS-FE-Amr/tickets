@@ -53,7 +53,7 @@ export default function AccountMenu() {
               aria-controls={open ? 'account-menu' : undefined}
               aria-haspopup="true"
               aria-expanded={open ? 'true' : undefined}>
-              <Avatar sx={{ width: 32, height: 32 }}>
+              <Avatar sx={{ width: 40, height: 40, fontSize: '16px' }}>
                 {String(data?.firstName[0]).toUpperCase()}
                 {String(data?.lastName[0]).toUpperCase()}
               </Avatar>
