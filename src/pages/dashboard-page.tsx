@@ -53,6 +53,7 @@ interface Column {
   minWidth?: number;
   align?: 'right';
   format?: (value: number) => string;
+  type: 'string' | 'boolean' | 'number';
 }
 
 const DashboardPage = () => {
@@ -145,18 +146,20 @@ const DashboardPage = () => {
 
   const columns: readonly Column[] = [
     // { id: 'id', label: 'Id', minWidth: 170 },
-    { id: 'todo', label: 'Todo', minWidth: 170 },
+    { id: 'todo', label: 'Todo', minWidth: 170, type: 'string' },
     {
       id: 'completed',
       label: 'Completed',
       minWidth: 170,
       align: 'right',
+      type: 'boolean',
     },
     {
       id: 'userId',
       label: 'User ID',
       minWidth: 170,
       align: 'right',
+      type: 'number',
     },
   ];
 
@@ -219,6 +222,8 @@ const DashboardPage = () => {
   const [selectedRow, setSelectedRow] = useState<TodosData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const globalLock = !!(isNewTodo || editRowId);
+
   const [
     createTodoMutation,
     { loading: isCreating, error: errorCreatingTodo },
@@ -270,7 +275,10 @@ const DashboardPage = () => {
 
   const validationSchema = Yup.object({
     completed: Yup.boolean().required('Completed State is required'),
-    userId: Yup.string().required('User Id is required'),
+    userId: Yup.number()
+      .typeError('User ID must be a number')
+      .required('User ID is required')
+      .moreThan(0, 'User ID must be greater than 0'),
     todo: Yup.string().required('Todo is required'),
   });
 
@@ -306,7 +314,7 @@ const DashboardPage = () => {
         <Button
           variant="contained"
           color="primary"
-          disabled={isNewTodo}
+          disabled={globalLock}
           onClick={() => {
             setEditRowId(null);
             setEditedRow({
@@ -405,6 +413,7 @@ const DashboardPage = () => {
               errors,
               touched,
               handleBlur,
+              setFieldValue,
             }) => (
               <Form>
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
@@ -437,6 +446,89 @@ const DashboardPage = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
+                        {isNewTodo && (
+                          <TableRow hover role="checkbox" tabIndex={-1}>
+                            {columns.map((column, index: number) => {
+                              const value = editedRow[column.id];
+                              const isBoolean = typeof value === 'boolean';
+
+                              return (
+                                <TableCell key={column.id} align="left">
+                                  {isBoolean ? (
+                                    <FormControl fullWidth>
+                                      <Select
+                                        onChange={handleChange}
+                                        fullWidth
+                                        name="completed"
+                                        value={
+                                          values.completed ? 'true' : 'false'
+                                        }
+                                        error={
+                                          touched.completed &&
+                                          Boolean(errors.completed)
+                                        }
+                                        onBlur={handleBlur}
+                                        variant="standard">
+                                        <MenuItem value="true">True</MenuItem>
+                                        <MenuItem value="false">False</MenuItem>
+                                      </Select>
+                                      {touched.completed &&
+                                        errors.completed && (
+                                          <FormHelperText>
+                                            {errors.completed}
+                                          </FormHelperText>
+                                        )}
+                                    </FormControl>
+                                  ) : (
+                                    <TextField
+                                      variant="standard"
+                                      fullWidth
+                                      autoFocus={index === 0}
+                                      name={column.id}
+                                      value={values[column.id]}
+                                      error={
+                                        touched[column.id] &&
+                                        Boolean(errors[column.id])
+                                      }
+                                      onBlur={(e) => {
+                                        handleBlur(e);
+                                        setFieldValue(
+                                          column.id,
+                                          column.type === 'string'
+                                            ? String(values[column.id]).trim()
+                                            : values[column.id],
+                                        );
+                                      }}
+                                      onChange={handleChange}
+                                      helperText={
+                                        touched[column.id] && errors[column.id]
+                                      }
+                                      type={column.type}
+                                    />
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell align={'center'}>
+                              <Box display="flex" gap={1}>
+                                <Button
+                                  color="primary"
+                                  variant="outlined"
+                                  disabled={isCreating}
+                                  type="submit">
+                                  Create
+                                </Button>
+                                <Button
+                                  color="primary"
+                                  disabled={isCreating}
+                                  onClick={() => setIsNewTodo(false)}>
+                                  Cancel
+                                </Button>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        )}
+
                         {rows.map((row: TodosData) => {
                           const isEditing = editRowId === row.documentId;
 
@@ -446,7 +538,7 @@ const DashboardPage = () => {
                               role="checkbox"
                               tabIndex={-1}
                               key={row.documentId}>
-                              {columns.map((column) => {
+                              {columns.map((column, index: number) => {
                                 const value = row[column.id];
                                 const isBoolean = typeof value === 'boolean';
 
@@ -497,6 +589,7 @@ const DashboardPage = () => {
                                           value={values[column.id]}
                                           onChange={handleChange}
                                           variant="standard"
+                                          autoFocus={index === 0}
                                           error={
                                             touched[column.id] &&
                                             Boolean(errors[column.id])
@@ -505,7 +598,17 @@ const DashboardPage = () => {
                                             touched[column.id] &&
                                             errors[column.id]
                                           }
-                                          onBlur={handleBlur}
+                                          onBlur={(e) => {
+                                            handleBlur(e);
+                                            setFieldValue(
+                                              column.id,
+                                              column.type === 'string'
+                                                ? String(
+                                                    values[column.id],
+                                                  ).trim()
+                                                : values[column.id],
+                                            );
+                                          }}
                                           type={
                                             typeof value === 'number'
                                               ? 'number'
@@ -557,6 +660,7 @@ const DashboardPage = () => {
                                         variant="outlined"
                                         color="primary"
                                         type="button"
+                                        disabled={globalLock}
                                         onClick={() => {
                                           setEditRowId(row.documentId);
                                           setEditedRow({
@@ -571,6 +675,7 @@ const DashboardPage = () => {
                                       <IconButton
                                         size="small"
                                         color="info"
+                                        disabled={globalLock}
                                         onClick={() =>
                                           handleOpenModal(row, 'view')
                                         }>
@@ -580,6 +685,7 @@ const DashboardPage = () => {
                                         <IconButton
                                           size="small"
                                           color="error"
+                                          disabled={globalLock}
                                           onClick={() =>
                                             handleOpenModal(row, 'delete')
                                           }>
@@ -593,83 +699,6 @@ const DashboardPage = () => {
                             </TableRow>
                           );
                         })}
-                        {isNewTodo && (
-                          <TableRow hover role="checkbox" tabIndex={-1}>
-                            {columns.map((column) => {
-                              const value = editedRow[column.id];
-                              const isBoolean = typeof value === 'boolean';
-
-                              return (
-                                <TableCell key={column.id} align="left">
-                                  {isBoolean ? (
-                                    <FormControl fullWidth>
-                                      <Select
-                                        onChange={handleChange}
-                                        fullWidth
-                                        name="completed"
-                                        value={
-                                          values.completed ? 'true' : 'false'
-                                        }
-                                        error={
-                                          touched.completed &&
-                                          Boolean(errors.completed)
-                                        }
-                                        onBlur={handleBlur}
-                                        variant="standard">
-                                        <MenuItem value="true">True</MenuItem>
-                                        <MenuItem value="false">False</MenuItem>
-                                      </Select>
-                                      {touched.completed &&
-                                        errors.completed && (
-                                          <FormHelperText>
-                                            {errors.completed}
-                                          </FormHelperText>
-                                        )}
-                                    </FormControl>
-                                  ) : (
-                                    <TextField
-                                      variant="standard"
-                                      fullWidth
-                                      name={column.id}
-                                      value={values[column.id]}
-                                      error={
-                                        touched[column.id] &&
-                                        Boolean(errors[column.id])
-                                      }
-                                      onBlur={handleBlur}
-                                      onChange={handleChange}
-                                      helperText={
-                                        touched[column.id] && errors[column.id]
-                                      }
-                                      type={
-                                        typeof value === 'number'
-                                          ? 'number'
-                                          : 'text'
-                                      }
-                                    />
-                                  )}
-                                </TableCell>
-                              );
-                            })}
-                            <TableCell align={'center'}>
-                              <Box display="flex" gap={1}>
-                                <Button
-                                  color="primary"
-                                  variant="outlined"
-                                  disabled={isCreating}
-                                  type="submit">
-                                  Create
-                                </Button>
-                                <Button
-                                  color="primary"
-                                  disabled={isCreating}
-                                  onClick={() => setIsNewTodo(false)}>
-                                  Cancel
-                                </Button>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        )}
                       </TableBody>
                     </Table>
                   </TableContainer>
