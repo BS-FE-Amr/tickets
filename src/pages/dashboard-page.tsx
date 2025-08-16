@@ -36,6 +36,7 @@ import {
   DELETE_TODO,
   FETCH_TODO,
   FETCH_TODOS,
+  GET_TODO_STATS,
   UPDATE_TODO,
 } from '../services/todos-service-gql';
 import type {
@@ -46,6 +47,8 @@ import type {
 import type { FetchPaginatedFilteredSearch } from '../types/general.types';
 import TodoDetails from './todos/todo-details';
 import { Form, Formik } from 'formik';
+import { handlePaste } from '../utils/helper';
+import TodoChart from '../components/todo-chart';
 
 interface Column {
   id: 'todo' | 'completed' | 'userId';
@@ -191,7 +194,7 @@ const DashboardPage = () => {
     deleteTodoMutation,
     { loading: isDeleting, error: errorDeletingTodo },
   ] = useMutation(DELETE_TODO, {
-    refetchQueries: ['GetTodos'],
+    refetchQueries: ['GetTodos', GET_TODO_STATS],
     onCompleted: () => {
       handleCloseModal();
       toast.success(`Todo Deleted Successfully!`);
@@ -228,17 +231,12 @@ const DashboardPage = () => {
     createTodoMutation,
     { loading: isCreating, error: errorCreatingTodo },
   ] = useMutation(CREATE_TODO, {
-    refetchQueries: ['GetTodos'],
+    refetchQueries: ['GetTodos', GET_TODO_STATS],
     onCompleted: () => {
       setIsNewTodo(false);
       setEditedRow({});
       setEditRowId(null);
       toast.success(`New Todo Added Successfully!`);
-    },
-    onError: () => {
-      toast.error(
-        errorCreatingTodo?.message || 'Error while creating the todo',
-      );
     },
   });
 
@@ -246,6 +244,7 @@ const DashboardPage = () => {
     useMutation(UPDATE_TODO, {
       refetchQueries: [
         'GetTodos',
+        GET_TODO_STATS,
         {
           query: FETCH_TODO,
           variables: { documentId: editRowId },
@@ -293,15 +292,12 @@ const DashboardPage = () => {
     setEditedRow({});
   };
 
-  const handleCreateTodo = async (values: Partial<TodosData>) =>
-    await createTodoMutation({
-      variables: {
-        data: values,
-      },
-    });
-
   return (
     <div className="container mt-[24px]">
+      {/* Chart */}
+
+      <TodoChart />
+
       {/* Todos Header */}
       <Box
         sx={{
@@ -320,7 +316,7 @@ const DashboardPage = () => {
             setEditedRow({
               todo: '',
               completed: false,
-              userId: null,
+              userId: 0,
             });
             setIsNewTodo(true);
           }}>
@@ -397,11 +393,43 @@ const DashboardPage = () => {
           isLoading={isLoading}>
           <Formik
             initialValues={editedRow}
-            onSubmit={async (values) => {
+            onSubmit={async (values, { setFieldError }) => {
+              if (values.todo?.trim().length === 0) {
+                setFieldError('todo', "Todo can't be empty");
+                return;
+              }
+              const sanitizedValues = {
+                todo: values.todo?.trim(),
+                completed: String(values.completed) === 'true' ? true : false,
+                userId: values.userId,
+              };
               if (isNewTodo) {
-                handleCreateTodo(values);
+                await createTodoMutation({
+                  variables: {
+                    data: sanitizedValues,
+                  },
+                }).catch((error) => {
+                  console.log('ERRRO');
+                  const field =
+                    error?.cause?.extensions?.error?.details?.errors?.[0]
+                      ?.path?.[0];
+                  const message =
+                    error?.cause?.extensions?.error?.details?.errors?.[0]
+                      ?.message;
+
+                  if (field && message) {
+                    setFieldError(field, message);
+                  } else {
+                    toast.error('Error while creating the todo');
+                  }
+
+                  toast.error(
+                    `${error?.cause?.extensions.error.details.errors[0].message} (${error?.cause?.extensions.error.details.errors[0].path[0]})` ||
+                      'Error while creating the todo',
+                  );
+                });
               } else {
-                handleUpdateTodo(values);
+                handleUpdateTodo(sanitizedValues);
               }
             }}
             enableReinitialize
@@ -467,7 +495,7 @@ const DashboardPage = () => {
                                           touched.completed &&
                                           Boolean(errors.completed)
                                         }
-                                        onBlur={handleBlur}
+                                        // onBlur={handleBlur}
                                         variant="standard">
                                         <MenuItem value="true">True</MenuItem>
                                         <MenuItem value="false">False</MenuItem>
@@ -482,23 +510,27 @@ const DashboardPage = () => {
                                   ) : (
                                     <TextField
                                       variant="standard"
+                                      onPaste={(e) =>
+                                        column.type === 'number'
+                                          ? handlePaste(e)
+                                          : {}
+                                      }
                                       fullWidth
                                       autoFocus={index === 0}
                                       name={column.id}
-                                      value={values[column.id]}
+                                      value={
+                                        column.type === 'number' &&
+                                        values[column.id] === 0
+                                          ? ''
+                                          : values[column.id] || ''
+                                      }
                                       error={
                                         touched[column.id] &&
                                         Boolean(errors[column.id])
                                       }
-                                      onBlur={(e) => {
-                                        handleBlur(e);
-                                        setFieldValue(
-                                          column.id,
-                                          column.type === 'string'
-                                            ? String(values[column.id]).trim()
-                                            : values[column.id],
-                                        );
-                                      }}
+                                      // onBlur={(e) => {
+                                      //   handleBlur(e);
+                                      // }}
                                       onChange={handleChange}
                                       helperText={
                                         touched[column.id] && errors[column.id]
@@ -521,7 +553,10 @@ const DashboardPage = () => {
                                 <Button
                                   color="primary"
                                   disabled={isCreating}
-                                  onClick={() => setIsNewTodo(false)}>
+                                  onClick={() => {
+                                    setEditedRow({});
+                                    setIsNewTodo(false);
+                                  }}>
                                   Cancel
                                 </Button>
                               </Box>
@@ -590,6 +625,7 @@ const DashboardPage = () => {
                                           onChange={handleChange}
                                           variant="standard"
                                           autoFocus={index === 0}
+                                          onPaste={handlePaste}
                                           error={
                                             touched[column.id] &&
                                             Boolean(errors[column.id])
@@ -600,14 +636,6 @@ const DashboardPage = () => {
                                           }
                                           onBlur={(e) => {
                                             handleBlur(e);
-                                            setFieldValue(
-                                              column.id,
-                                              column.type === 'string'
-                                                ? String(
-                                                    values[column.id],
-                                                  ).trim()
-                                                : values[column.id],
-                                            );
                                           }}
                                           type={
                                             typeof value === 'number'

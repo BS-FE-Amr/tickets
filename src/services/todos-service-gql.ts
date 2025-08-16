@@ -63,3 +63,12 @@ export const UPDATE_TODO = gql`
   }
 `;
 
+export const GET_TODO_STATS = gql`
+  query GetStatus {
+    todoStats {
+      completed
+      notCompleted
+    }
+  }
+`;
+

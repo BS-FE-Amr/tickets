@@ -7,3 +7,12 @@ export const trimValues = (values: Record<string, any>) => {
   );
 };
 
+export const handlePaste = (e) => {
+  const pastedValue = e.clipboardData.getData('text');
+
+  // Check if it's a valid number
+  if (isNaN(Number(pastedValue))) {
+    e.preventDefault(); // Stop the paste
+  }
+};
+

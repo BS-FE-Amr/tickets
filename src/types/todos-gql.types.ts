@@ -29,3 +29,11 @@ export interface TodosNewData {
   userId: number | null;
 }
 
+export interface TodosStatusResponse {
+  todoStats: {
+    total: number;
+    completed: number;
+    notCompleted: number;
+  };
+}
+
