@@ -38,7 +38,7 @@ export const FETCH_USER = gql`
 `;
 
 export const CREATE_USER = gql`
-  mutation CreateUser($data: UserInput!) {
+  mutation CreateEmployee($data: EmployeeInput!) {
     createEmployee(data: $data) {
       firstName
       lastName
@@ -57,7 +57,7 @@ export const DELETE_USER = gql`
 `;
 
 export const UPDATE_USER = gql`
-  mutation UpdateUser($documentId: ID!, $data: UserInput!) {
+  mutation UpdateUser($documentId: ID!, $data: EmployeeInput!) {
     updateEmployee(documentId: $documentId, data: $data) {
       documentId
       firstName

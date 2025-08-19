@@ -1,9 +1,18 @@
-export type TodosFilterValue = 'completed' | 'todo' | 'userId';
+import type { UsersData } from './users-gql.types';
+
+export type TodosFilterValue = 'completed' | 'todo' | 'employee';
 
 export interface TodosData {
   todo: string;
   completed: boolean;
-  userId: number | null;
+  employee: UsersData;
+  documentId: string;
+}
+
+export interface TodosTableData {
+  todo: string;
+  completed: boolean;
+  employee: string;
   documentId: string;
 }
 
@@ -34,6 +43,14 @@ export interface TodosStatusResponse {
     total: number;
     completed: number;
     notCompleted: number;
+  };
+}
+
+export interface TodosStatusAssignedResponse {
+  employeeAssignmentStats: {
+    assignedEmployees: number;
+    unassignedEmployees: number;
+    totalEmployees: number;
   };
 }
 

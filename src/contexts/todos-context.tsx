@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { TodosFilterValue } from '../types/todos.types';
+import type { TodosFilterValue } from '../types/todos-gql.types';
 
 export type TodosContextType = {
   searchValue: string | boolean | number;

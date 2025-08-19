@@ -36,6 +36,7 @@ import {
   DELETE_TODO,
   FETCH_TODO,
   FETCH_TODOS,
+  GET_TODO_ASSIGNED_STATS,
   GET_TODO_STATS,
   UPDATE_TODO,
 } from '../services/todos-service-gql';
@@ -43,20 +44,27 @@ import type {
   TodosResponse,
   TodosData,
   TodosFilterValue,
+  TodosTableData,
+  TodosStatusResponse,
+  TodosStatusAssignedResponse,
 } from '../types/todos-gql.types';
 import type { FetchPaginatedFilteredSearch } from '../types/general.types';
 import TodoDetails from './todos/todo-details';
 import { Form, Formik } from 'formik';
 import { handlePaste } from '../utils/helper';
 import TodoChart from '../components/todo-chart';
+import type { UsersData } from '../types/users-gql.types';
+import DropdownWithPagination from '../components/users-fetch';
+import Logger from '../components/logger';
+import PieChart from '../components/todo-chart';
 
 interface Column {
-  id: 'todo' | 'completed' | 'userId';
+  id: 'todo' | 'completed' | 'employee';
   label: string;
   minWidth?: number;
   align?: 'right';
   format?: (value: number) => string;
-  type: 'string' | 'boolean' | 'number';
+  type: 'string' | 'boolean' | 'number' | 'select';
 }
 
 const DashboardPage = () => {
@@ -67,11 +75,9 @@ const DashboardPage = () => {
     useTodosContext();
 
   const handleChange = (event: SelectChangeEvent) => {
-    if (event.target.value === 'todo') {
-      setInputValue('');
-    } else if (event.target.value === 'completed') {
+    if (event.target.value === 'completed') {
       setInputValue(false);
-    } else if (event.target.value === 'userId') {
+    } else {
       setInputValue('');
     }
     setFilterValue(event.target.value as TodosFilterValue);
@@ -90,12 +96,24 @@ const DashboardPage = () => {
   const [filters, setFilters] = useState({});
 
   useEffect(() => {
-    if (filterValue === 'userId') {
+    if (filterValue === 'employee') {
       if (!searchValue) {
         setFilters({});
       } else {
+        const [first, last] = String(searchValue).split(' ');
         setFilters({
-          [filterValue]: { contains: Number(searchValue) },
+          and: [
+            {
+              employee: {
+                firstName: { contains: first || '' },
+              },
+            },
+            {
+              employee: {
+                lastName: { contains: last || '' },
+              },
+            },
+          ],
         });
       }
     } else if (filterValue === 'completed') {
@@ -141,10 +159,15 @@ const DashboardPage = () => {
   function createData(
     todo: string,
     completed: boolean,
-    userId: number,
+    employee: UsersData,
     documentId: string,
   ): TodosData {
-    return { todo, completed, userId, documentId };
+    return {
+      todo,
+      completed,
+      employee: employee,
+      documentId,
+    };
   }
 
   const columns: readonly Column[] = [
@@ -158,11 +181,11 @@ const DashboardPage = () => {
       type: 'boolean',
     },
     {
-      id: 'userId',
-      label: 'User ID',
+      id: 'employee',
+      label: 'User',
       minWidth: 170,
       align: 'right',
-      type: 'number',
+      type: 'select',
     },
   ];
 
@@ -172,7 +195,7 @@ const DashboardPage = () => {
         return createData(
           todo?.todo,
           todo?.completed,
-          Number(todo?.userId),
+          todo?.employee,
           todo?.documentId,
         );
       }) || []
@@ -194,7 +217,11 @@ const DashboardPage = () => {
     deleteTodoMutation,
     { loading: isDeleting, error: errorDeletingTodo },
   ] = useMutation(DELETE_TODO, {
-    refetchQueries: ['GetTodos', GET_TODO_STATS],
+    refetchQueries: [
+      'GetTodos',
+      GET_TODO_STATS,
+      { query: GET_TODO_ASSIGNED_STATS },
+    ],
     onCompleted: () => {
       handleCloseModal();
       toast.success(`Todo Deleted Successfully!`);
@@ -231,7 +258,11 @@ const DashboardPage = () => {
     createTodoMutation,
     { loading: isCreating, error: errorCreatingTodo },
   ] = useMutation(CREATE_TODO, {
-    refetchQueries: ['GetTodos', GET_TODO_STATS],
+    refetchQueries: [
+      'GetTodos',
+      GET_TODO_STATS,
+      { query: GET_TODO_ASSIGNED_STATS },
+    ],
     onCompleted: () => {
       setIsNewTodo(false);
       setEditedRow({});
@@ -245,6 +276,7 @@ const DashboardPage = () => {
       refetchQueries: [
         'GetTodos',
         GET_TODO_STATS,
+        { query: GET_TODO_ASSIGNED_STATS },
         {
           query: FETCH_TODO,
           variables: { documentId: editRowId },
@@ -274,29 +306,95 @@ const DashboardPage = () => {
 
   const validationSchema = Yup.object({
     completed: Yup.boolean().required('Completed State is required'),
-    userId: Yup.number()
-      .typeError('User ID must be a number')
-      .required('User ID is required')
-      .moreThan(0, 'User ID must be greater than 0'),
     todo: Yup.string().required('Todo is required'),
+    employee: Yup.object().nullable(false).required('Employee is required'),
   });
 
   const handleUpdateTodo = async (values: Partial<TodosData>) => {
+    console.log('VALLL', values);
     await updateTodoMutation({
       variables: {
         documentId: editRowId,
-        data: values,
+        data: {
+          todo: values.todo,
+          completed: values.completed,
+          employee: values.employee?.documentId,
+        },
       },
     });
     setEditRowId(null);
     setEditedRow({});
   };
 
+  const {
+    data: statusData,
+    loading: isLoadingStatus,
+    error: errorStatus,
+  } = useQuery<TodosStatusResponse>(GET_TODO_STATS);
+
+  const {
+    data: statusAssignedData,
+    loading: isLoadingStatusAssigned,
+    error: errorStatusAssigned,
+  } = useQuery<TodosStatusAssignedResponse>(GET_TODO_ASSIGNED_STATS);
+
+  const chartTodosData = {
+    labels: ['Completed', 'Not Completed'],
+    datasets: [
+      {
+        label: 'Todos',
+        data: [
+          statusData?.todoStats.completed,
+          statusData?.todoStats.notCompleted || 0,
+        ],
+        backgroundColor: ['#0f7037', '#910929'],
+      },
+    ],
+  };
+
+  const chartTodosAssignedData = {
+    labels: ['Assigned', 'Not Assigned'],
+    datasets: [
+      {
+        label: 'Employees',
+        data: [
+          statusAssignedData?.employeeAssignmentStats.assignedEmployees,
+          statusAssignedData?.employeeAssignmentStats.unassignedEmployees,
+        ],
+        backgroundColor: ['#0f7037', '#910929'],
+      },
+    ],
+  };
+
+  //
+
   return (
     <div className="container mt-[24px]">
       {/* Chart */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'flex-start',
+          alignItems: 'center',
+          gap: '48px',
+          mb: 3,
+        }}>
+        <PieChart
+          chartData={chartTodosData}
+          data={statusData}
+          error={errorStatus}
+          head={'Todos Percentages'}
+          isLoading={isLoadingStatus}
+        />
 
-      <TodoChart />
+        <PieChart
+          chartData={chartTodosAssignedData}
+          data={statusAssignedData}
+          error={errorStatusAssigned}
+          head={'Employees Assigned'}
+          isLoading={isLoadingStatusAssigned}
+        />
+      </Box>
 
       {/* Todos Header */}
       <Box
@@ -316,7 +414,7 @@ const DashboardPage = () => {
             setEditedRow({
               todo: '',
               completed: false,
-              userId: 0,
+              employee: null,
             });
             setIsNewTodo(true);
           }}>
@@ -380,7 +478,7 @@ const DashboardPage = () => {
             onChange={handleChange}>
             <MenuItem value={'todo'}>Todo</MenuItem>
             <MenuItem value={'completed'}>Completed</MenuItem>
-            <MenuItem value={'userId'}>User Id</MenuItem>
+            <MenuItem value={'employee'}>Employee</MenuItem>
           </Select>
         </FormControl>
       </div>
@@ -394,6 +492,7 @@ const DashboardPage = () => {
           <Formik
             initialValues={editedRow}
             onSubmit={async (values, { setFieldError }) => {
+              console.log('VALL', values);
               if (values.todo?.trim().length === 0) {
                 setFieldError('todo', "Todo can't be empty");
                 return;
@@ -401,12 +500,16 @@ const DashboardPage = () => {
               const sanitizedValues = {
                 todo: values.todo?.trim(),
                 completed: String(values.completed) === 'true' ? true : false,
-                userId: values.userId,
+                employee: values.employee,
               };
               if (isNewTodo) {
                 await createTodoMutation({
                   variables: {
-                    data: sanitizedValues,
+                    data: {
+                      todo: sanitizedValues.todo,
+                      completed: sanitizedValues.completed,
+                      employee: sanitizedValues.employee?.documentId,
+                    },
                   },
                 }).catch((error) => {
                   console.log('ERRRO');
@@ -479,6 +582,7 @@ const DashboardPage = () => {
                             {columns.map((column, index: number) => {
                               const value = editedRow[column.id];
                               const isBoolean = typeof value === 'boolean';
+                              const isSelect = column.type === 'select';
 
                               return (
                                 <TableCell key={column.id} align="left">
@@ -507,6 +611,15 @@ const DashboardPage = () => {
                                           </FormHelperText>
                                         )}
                                     </FormControl>
+                                  ) : isSelect ? (
+                                    <DropdownWithPagination
+                                      defaultItem={value}
+                                      isEditing={true}
+                                      value={values.employee}
+                                      setValue={(val) =>
+                                        setFieldValue('employee', val)
+                                      }
+                                    />
                                   ) : (
                                     <TextField
                                       variant="standard"
@@ -546,7 +659,9 @@ const DashboardPage = () => {
                                 <Button
                                   color="primary"
                                   variant="outlined"
-                                  disabled={isCreating}
+                                  disabled={
+                                    isCreating || values.employee === null
+                                  }
                                   type="submit">
                                   Create
                                 </Button>
@@ -576,8 +691,7 @@ const DashboardPage = () => {
                               {columns.map((column, index: number) => {
                                 const value = row[column.id];
                                 const isBoolean = typeof value === 'boolean';
-
-                                console.log('VALUES', values);
+                                const isSelect = column.type === 'select';
 
                                 return (
                                   <TableCell
@@ -618,6 +732,15 @@ const DashboardPage = () => {
                                               </FormHelperText>
                                             )}
                                         </FormControl>
+                                      ) : isSelect ? (
+                                        <DropdownWithPagination
+                                          defaultItem={value}
+                                          isEditing={isEditing}
+                                          value={values.employee}
+                                          setValue={(val) =>
+                                            setFieldValue('employee', val)
+                                          }
+                                        />
                                       ) : (
                                         <TextField
                                           name={column.id}
@@ -648,6 +771,17 @@ const DashboardPage = () => {
                                     ) : column.format &&
                                       typeof value === 'number' ? (
                                       column.format(value)
+                                    ) : isSelect ? (
+                                      <>
+                                        <DropdownWithPagination
+                                          defaultItem={value}
+                                          isEditing={isEditing}
+                                          value={values.employee}
+                                          setValue={(val) =>
+                                            setFieldValue('employee', val)
+                                          }
+                                        />
+                                      </>
                                     ) : (
                                       String(value)
                                     )}
@@ -667,7 +801,9 @@ const DashboardPage = () => {
                                       <Button
                                         variant="outlined"
                                         color="primary"
-                                        disabled={isUpdating}
+                                        disabled={
+                                          isUpdating || values.employee === null
+                                        }
                                         type="button"
                                         onClick={() => handleSubmit()}>
                                         Update
@@ -693,7 +829,7 @@ const DashboardPage = () => {
                                           setEditRowId(row.documentId);
                                           setEditedRow({
                                             todo: row.todo,
-                                            userId: row.userId,
+                                            employee: row.employee,
                                             completed: row.completed,
                                           });
                                           setIsNewTodo(false);
@@ -740,6 +876,7 @@ const DashboardPage = () => {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                   />
                 </Paper>
+                <Logger /> {/* This logs on any change */}
               </Form>
             )}
           </Formik>

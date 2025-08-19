@@ -59,8 +59,11 @@ const TodoDetails = ({ todoId }: { todoId?: string }) => {
                   </Typography>
                 </div>
                 <div className="flex gap-[16px] ">
-                  <Typography variant="body1">UserId:</Typography>
-                  <Typography variant="body1">{data?.todo.userId}</Typography>
+                  <Typography variant="body1">Employee:</Typography>
+                  <Typography variant="body1">
+                    {data?.todo.employee.firstName}{' '}
+                    {data?.todo.employee.lastName}
+                  </Typography>
                 </div>
               </div>
             </Paper>
