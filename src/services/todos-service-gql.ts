@@ -5,7 +5,7 @@ export const FETCH_TODOS = gql`
     todos_connection(
       pagination: { page: $page, pageSize: $pageSize }
       filters: $filters
-      sort: "userId"
+      sort: "employee.documentId"
     ) {
       nodes {
         documentId

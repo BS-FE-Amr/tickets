@@ -7,7 +7,7 @@ export const trimValues = (values: Record<string, any>) => {
   );
 };
 
-export const handlePaste = (e) => {
+export const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
   const pastedValue = e.clipboardData.getData('text');
 
   // Check if it's a valid number

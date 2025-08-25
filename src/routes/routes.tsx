@@ -7,10 +7,10 @@ import Loading from '../components/loading';
 import DashboardPage from '../pages/dashboard-page';
 import TodosProvider from '../providers/todo-provider';
 
-const LazyEditTodo = lazy(() => import('../pages/todos/edit-todo'));
-const LazyNewTodo = lazy(() => import('../pages/todos/new-todo'));
+// const LazyEditTodo = lazy(() => import('../pages/todos/edit-todo'));
+// const LazyNewTodo = lazy(() => import('../pages/todos/new-todo'));
 const LazyLogin = lazy(() => import('../pages/login-page'));
-const LazyTodoDetails = lazy(() => import('../pages/todos/todo-details'));
+// const LazyTodoDetails = lazy(() => import('../pages/todos/todo-details'));
 const LazyUsers = lazy(() => import('../pages/users-page'));
 const LazyNotFound = lazy(() => import('../pages/not-found'));
 
@@ -28,15 +28,15 @@ const AppRoutes = () => {
                 </TodosProvider>
               }
             />
-            <Route
+            {/* <Route
               path="/todos/new"
               element={
                 <Suspense fallback={<Loading />}>
                   <LazyNewTodo />
                 </Suspense>
               }
-            />
-            <Route
+            /> */}
+            {/* <Route
               path="/todos/:id/edit"
               element={
                 <Suspense fallback={<Loading />}>
@@ -51,7 +51,7 @@ const AppRoutes = () => {
                   <LazyTodoDetails />
                 </Suspense>
               }
-            />
+            /> */}
 
             <Route
               path="/dashboard/users"

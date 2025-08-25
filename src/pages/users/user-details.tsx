@@ -1,12 +1,24 @@
 // import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import DataDisplay from '../../components/data-display';
-import { Box, Paper, Typography } from '@mui/material';
+import {
+  Button,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from '@mui/material';
 import { useQuery } from '@apollo/client';
 import { FETCH_USER } from '../../services/users-service-gql';
 import type { UserItemResponse } from '../../types/users-gql.types';
 
-const UserDetails = ({ userId }: { userId?: string }) => {
+const UserDetails = ({
+  userId,
+  handleClose,
+}: {
+  userId?: string;
+  handleClose: () => void;
+}) => {
   const { id } = useParams();
   const userFinalId = userId || id;
 
@@ -25,52 +37,38 @@ const UserDetails = ({ userId }: { userId?: string }) => {
     },
   });
 
+  if (!userFinalId) {
+    return;
+  }
+
   return (
-    <DataDisplay<UserItemResponse | undefined>
-      data={data}
-      error={error?.message}
-      isLoading={isLoading}>
-      <div className="mt-[24px]">
-        <div className="container">
-          <Box sx={{ p: 4, maxWidth: 500, margin: 'auto' }}>
-            <Paper elevation={3} sx={{ p: 4 }}>
-              <div className="flex justify-between items-center">
-                <Typography variant="h5" fontWeight="bold">
-                  User
-                </Typography>
-                {/* <Link href={`/users/${userFinalId}/edit`}>Edit</Link> */}
-              </div>
-              <div className="mt-[24px]">
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Id:</Typography>
-                  <Typography variant="body1">
-                    {data?.employee.documentId}
-                  </Typography>
-                </div>
-
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">First Name:</Typography>
-                  <Typography variant="body1">
-                    {data?.employee.firstName}
-                  </Typography>
-                </div>
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Last Name:</Typography>
-                  <Typography variant="body1">
-                    {data?.employee.lastName}
-                  </Typography>
-                </div>
-
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Age:</Typography>
-                  <Typography variant="body1">{data?.employee.age}</Typography>
-                </div>
-              </div>
-            </Paper>
-          </Box>
-        </div>
-      </div>
-    </DataDisplay>
+    <>
+      <DialogTitle>User Details</DialogTitle>
+      <DialogContent dividers>
+        <DataDisplay<UserItemResponse | undefined>
+          data={data}
+          error={error && error?.message}
+          isLoading={isLoading}>
+          <Typography>
+            <strong>ID:</strong> {data?.employee.documentId}
+          </Typography>
+          <Typography>
+            <strong>First Name:</strong> {data?.employee.firstName}
+          </Typography>
+          <Typography>
+            <strong>Last Name:</strong> {data?.employee.lastName}
+          </Typography>
+          <Typography>
+            <strong>Age:</strong> {data?.employee.age}
+          </Typography>
+        </DataDisplay>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} color="primary">
+          Close
+        </Button>
+      </DialogActions>
+    </>
   );
 };
 

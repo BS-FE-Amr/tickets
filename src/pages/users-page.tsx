@@ -2,11 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
   MenuItem,
-  Modal,
   Paper,
   Select,
   Table,
@@ -31,7 +35,6 @@ import useDebounce from '../hooks/use-debounce';
 import type {
   UsersData,
   UsersFilterValue,
-  UsersNewData,
   UsersResponse,
 } from '../types/users-gql.types';
 import type { FetchPaginatedFilteredSearch } from '../types/general.types';
@@ -47,7 +50,7 @@ import toast from 'react-hot-toast';
 import UserDetails from './users/user-details';
 import { Form, Formik } from 'formik';
 import { handlePaste } from '../utils/helper';
-import Logger from '../components/logger';
+// import Logger from '../components/logger';
 import { GET_TODO_ASSIGNED_STATS } from '../services/todos-service-gql';
 
 interface Column {
@@ -168,8 +171,8 @@ const UsersPage = () => {
   };
 
   const handleCloseModal = () => {
-    setSelectedRow(null);
     setIsModalOpen(false);
+    setSelectedRow(null);
   };
 
   const [
@@ -188,17 +191,17 @@ const UsersPage = () => {
     },
   });
 
-  const style = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    border: '2px solid #000',
-    boxShadow: 24,
-    p: 4,
-  };
+  // const style = {
+  //   position: 'absolute',
+  //   top: '50%',
+  //   left: '50%',
+  //   transform: 'translate(-50%, -50%)',
+  //   width: 400,
+  //   bgcolor: 'background.paper',
+  //   border: '2px solid #000',
+  //   boxShadow: 24,
+  //   p: 4,
+  // };
 
   const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const [editRowId, setEditRowId] = useState<string | null>(null);
@@ -250,7 +253,7 @@ const UsersPage = () => {
     if (selectedRow) {
       setSelectedRow(null);
     }
-    setModalType(null);
+    // setModalType(null);
     setIsModalOpen(false);
   };
 
@@ -268,7 +271,7 @@ const UsersPage = () => {
   });
 
   return (
-    <div className="container mt-[24px]">
+    <Container sx={{ mt: 3 }}>
       {/* Head */}
       <Box
         sx={{
@@ -287,19 +290,20 @@ const UsersPage = () => {
             setEditedRow({
               firstName: '',
               lastName: '',
-              age: null,
+              age: undefined,
             });
             setIsNewUser(true);
           }}>
           Add New User
         </Button>
       </Box>
-      <div className="mt-[24px] ">
-        <div className="flex gap-[24px] mb-[24px]">
+      <Box mt={'24px'}>
+        <Box display="flex" gap="24px" mb="24px">
           {/* Users Search */}
           <TextField
+            fullWidth
             id="outlined-basic"
-            label="Search Query"
+            label="Search"
             variant="outlined"
             type={isNumber ? 'number' : 'text'}
             name="search"
@@ -316,7 +320,7 @@ const UsersPage = () => {
           />
 
           {/* Users Filter dropdown */}
-          <FormControl fullWidth>
+          <FormControl sx={{ width: '240px' }}>
             <InputLabel id="demo-simple-select-label">Filter</InputLabel>
             <Select
               labelId="demo-simple-select-label"
@@ -330,7 +334,7 @@ const UsersPage = () => {
               <MenuItem value={'age'}>Age</MenuItem>
             </Select>
           </FormControl>
-        </div>
+        </Box>
 
         {/* Users Table */}
         <DataDisplay<UsersResponse | undefined>
@@ -393,19 +397,14 @@ const UsersPage = () => {
             }}
             enableReinitialize
             validationSchema={validationSchema}>
-            {({
-              handleSubmit,
-              handleChange,
-              values,
-              errors,
-              touched,
-              handleBlur,
-              setFieldValue,
-            }) => (
+            {({ handleSubmit, handleChange, values, errors, touched }) => (
               <Form>
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                   <TableContainer sx={{ maxHeight: 440 }}>
-                    <Table stickyHeader aria-label="sticky table">
+                    <Table
+                      stickyHeader
+                      aria-label="sticky table"
+                      sx={{ tableLayout: 'fixed', width: '100%' }}>
                       <TableHead>
                         <TableRow>
                           {columns.map((column) => (
@@ -432,7 +431,7 @@ const UsersPage = () => {
                         {isNewUser && (
                           <TableRow hover role="checkbox" tabIndex={-1}>
                             {columns.map((column, index) => {
-                              const value = editedRow[column.id];
+                              // const value = editedRow[column.id];
 
                               return (
                                 <TableCell key={column.id} align="left">
@@ -447,7 +446,9 @@ const UsersPage = () => {
                                     }
                                     onPaste={(e) =>
                                       column.type === 'number'
-                                        ? handlePaste(e)
+                                        ? handlePaste(
+                                            e as React.ClipboardEvent<HTMLInputElement>,
+                                          )
                                         : {}
                                     }
                                     value={
@@ -612,46 +613,50 @@ const UsersPage = () => {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                   />
                 </Paper>
-                <Logger /> {/* This logs on any change */}
+                {/* <Logger />  */}
               </Form>
             )}
           </Formik>
         </DataDisplay>
 
-        <Modal
-          open={isModalOpen}
-          onClose={handleModalClose}
-          aria-labelledby="modal-title"
-          aria-describedby="modal-description">
+        <Dialog open={isModalOpen} onClose={handleModalClose}>
           {modalType === 'view' ? (
-            <UserDetails userId={selectedRow?.documentId} />
+            <UserDetails
+              userId={selectedRow?.documentId}
+              handleClose={handleModalClose}
+            />
           ) : (
-            <Box sx={style}>
-              <Typography variant="h5" fontWeight="bold">
-                Are you sure you want to delete user #{selectedRow?.firstName}
-              </Typography>
-
-              <div className="flex justify-between">
-                <Button onClick={handleCloseModal} disabled={isDeleting}>
-                  Close
-                </Button>
-                <Button
-                  onClick={async () => {
-                    await deleteUserMutation({
-                      variables: {
-                        documentId: selectedRow?.documentId,
-                      },
-                    });
-                  }}
-                  disabled={isDeleting}>
-                  Delete
-                </Button>
-              </div>
-            </Box>
+            selectedRow && (
+              <>
+                <DialogTitle>Delete User</DialogTitle>
+                <DialogContent dividers>
+                  <Typography>
+                    Are you sure you want to delete User #
+                    {selectedRow?.firstName} {selectedRow?.lastName}
+                  </Typography>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseModal} disabled={isDeleting}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      await deleteUserMutation({
+                        variables: {
+                          documentId: selectedRow?.documentId,
+                        },
+                      });
+                    }}
+                    disabled={isDeleting}>
+                    Delete
+                  </Button>
+                </DialogActions>
+              </>
+            )
           )}
-        </Modal>
-      </div>
-    </div>
+        </Dialog>
+      </Box>
+    </Container>
   );
 };
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TodosFilterValue } from '../types/todos.types';
+import type { TodosFilterValue } from '../types/todos-gql.types';
 import { TodosContext } from '../contexts/todos-context';
 
 const TodosProvider = ({ children }: { children: React.ReactNode }) => {
