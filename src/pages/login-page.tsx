@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   Checkbox,
+  Container,
   FormControlLabel,
   Link,
   Paper,
@@ -125,8 +126,15 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="w-full h-screen grid place-items-center justify-center">
-      <div className="container">
+    <Box
+      sx={{
+        width: '100%',
+        height: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <Container>
         <Box
           display="flex"
           justifyContent="center"
@@ -138,7 +146,13 @@ const LoginPage = () => {
             </Typography>
 
             <form onSubmit={handleSubmit}>
-              <div className="py-[24px] flex flex-col gap-[24px] ">
+              <Box
+                sx={{
+                  py: 3, // 24px (3 * 8px)
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '24px',
+                }}>
                 <TextField
                   id="outlined-basic"
                   label="Username"
@@ -189,12 +203,12 @@ const LoginPage = () => {
                 <Typography align="center" variant="body2">
                   New User? <Link href="#">Signup</Link>
                 </Typography>
-              </div>
+              </Box>
             </form>
           </Paper>
         </Box>
-      </div>
-    </div>
+      </Container>
+    </Box>
   );
 };
 

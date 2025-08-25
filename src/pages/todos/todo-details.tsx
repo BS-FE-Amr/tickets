@@ -1,12 +1,24 @@
 // import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import DataDisplay from '../../components/data-display';
-import { Box, Paper, Typography } from '@mui/material';
+import {
+  Button,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from '@mui/material';
 import { useQuery } from '@apollo/client';
 import { FETCH_TODO } from '../../services/todos-service-gql';
 import type { TodoItemResponse } from '../../types/todos-gql.types';
 
-const TodoDetails = ({ todoId }: { todoId?: string }) => {
+const TodoDetails = ({
+  todoId,
+  handleClose,
+}: {
+  todoId?: string;
+  handleClose: () => void;
+}) => {
   const { id } = useParams();
   const todoFinalId = todoId || id;
 
@@ -23,51 +35,45 @@ const TodoDetails = ({ todoId }: { todoId?: string }) => {
     variables: {
       documentId: todoFinalId,
     },
+    skip: !todoFinalId,
   });
 
-  return (
-    <DataDisplay<TodoItemResponse | undefined>
-      data={data}
-      error={error?.message}
-      isLoading={isLoading}>
-      <div className="mt-[24px]">
-        <div className="container">
-          <Box sx={{ p: 4, maxWidth: 500, margin: 'auto' }}>
-            <Paper elevation={3} sx={{ p: 4 }}>
-              <div className="flex justify-between items-center">
-                <Typography variant="h5" fontWeight="bold">
-                  Todo
-                </Typography>
-                {/* <Link href={`/todos/${todoFinalId}/edit`}>Edit</Link> */}
-              </div>
-              <div className="mt-[24px]">
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Id:</Typography>
-                  <Typography variant="body1">
-                    {data?.todo.documentId}
-                  </Typography>
-                </div>
+  if (!todoFinalId) {
+    return;
+  }
 
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Todo:</Typography>
-                  <Typography variant="body1">{data?.todo.todo}</Typography>
-                </div>
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">Completed:</Typography>
-                  <Typography variant="body1">
-                    {data?.todo.completed ? 'True' : 'False'}
-                  </Typography>
-                </div>
-                <div className="flex gap-[16px] ">
-                  <Typography variant="body1">UserId:</Typography>
-                  <Typography variant="body1">{data?.todo.userId}</Typography>
-                </div>
-              </div>
-            </Paper>
-          </Box>
-        </div>
-      </div>
-    </DataDisplay>
+  return (
+    <>
+      <DialogTitle>Ticket Details</DialogTitle>
+      <DialogContent dividers>
+        <DataDisplay<TodoItemResponse | undefined>
+          data={data}
+          error={error && error?.message}
+          isLoading={isLoading}>
+          <Typography>
+            <strong>ID:</strong> {data?.todo.documentId}
+          </Typography>
+          <Typography>
+            <strong>Ticket:</strong> {data?.todo.todo}
+          </Typography>
+          <Typography>
+            <strong>Status:</strong>{' '}
+            {data?.todo.completed ? 'Completed' : 'Not Completed'}
+          </Typography>
+          <Typography>
+            <strong>User:</strong>
+            {data?.todo?.employee
+              ? `${data?.todo.employee?.firstName} ${data?.todo.employee?.lastName}`
+              : 'No assigne yet'}
+          </Typography>
+        </DataDisplay>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} color="primary">
+          Close
+        </Button>
+      </DialogActions>
+    </>
   );
 };
 

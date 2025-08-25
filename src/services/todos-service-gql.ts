@@ -5,13 +5,19 @@ export const FETCH_TODOS = gql`
     todos_connection(
       pagination: { page: $page, pageSize: $pageSize }
       filters: $filters
-      sort: "userId"
+      sort: "employee.documentId"
     ) {
       nodes {
         documentId
         todo
         userId
         completed
+        employee {
+          documentId
+          firstName
+          lastName
+          age
+        }
       }
       pageInfo {
         pageSize
@@ -28,8 +34,11 @@ export const FETCH_TODO = gql`
     todo(documentId: $documentId) {
       documentId
       todo
-      userId
       completed
+      employee {
+        firstName
+        lastName
+      }
     }
   }
 `;
@@ -68,6 +77,16 @@ export const GET_TODO_STATS = gql`
     todoStats {
       completed
       notCompleted
+    }
+  }
+`;
+
+export const GET_TODO_ASSIGNED_STATS = gql`
+  query GetAssignedStatus {
+    employeeAssignmentStats {
+      assignedEmployees
+      unassignedEmployees
+      totalEmployees
     }
   }
 `;

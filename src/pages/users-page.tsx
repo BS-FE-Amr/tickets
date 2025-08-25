@@ -2,11 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
   MenuItem,
-  Modal,
   Paper,
   Select,
   Table,
@@ -23,6 +27,7 @@ import {
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import DeleteIcon from '@mui/icons-material/Delete';
+import * as Yup from 'yup';
 
 import { useUsersContext } from '../contexts/users-context';
 import DataDisplay from '../components/data-display';
@@ -30,7 +35,6 @@ import useDebounce from '../hooks/use-debounce';
 import type {
   UsersData,
   UsersFilterValue,
-  UsersNewData,
   UsersResponse,
 } from '../types/users-gql.types';
 import type { FetchPaginatedFilteredSearch } from '../types/general.types';
@@ -44,6 +48,10 @@ import {
 import { useMutation, useQuery } from '@apollo/client';
 import toast from 'react-hot-toast';
 import UserDetails from './users/user-details';
+import { Form, Formik } from 'formik';
+import { handlePaste } from '../utils/helper';
+// import Logger from '../components/logger';
+import { GET_TODO_ASSIGNED_STATS } from '../services/todos-service-gql';
 
 interface Column {
   id: 'firstName' | 'lastName' | 'age';
@@ -51,6 +59,7 @@ interface Column {
   minWidth?: number;
   align?: 'right';
   format?: (value: number) => string;
+  type: 'string' | 'number';
 }
 
 const UsersPage = () => {
@@ -138,18 +147,20 @@ const UsersPage = () => {
 
   const columns: readonly Column[] = [
     // { id: 'id', label: 'Id', minWidth: 170 },
-    { id: 'firstName', label: 'First Name', minWidth: 100 },
+    { id: 'firstName', label: 'First Name', minWidth: 100, type: 'string' },
     {
       id: 'lastName',
       label: 'LastName',
       minWidth: 170,
       align: 'right',
+      type: 'string',
     },
     {
       id: 'age',
       label: 'Age',
       minWidth: 170,
       align: 'right',
+      type: 'number',
     },
   ];
 
@@ -160,15 +171,15 @@ const UsersPage = () => {
   };
 
   const handleCloseModal = () => {
-    setSelectedRow(null);
     setIsModalOpen(false);
+    setSelectedRow(null);
   };
 
   const [
     deleteUserMutation,
     { loading: isDeleting, error: errorDeletingUser },
   ] = useMutation(DELETE_USER, {
-    refetchQueries: ['GetUsers'],
+    refetchQueries: ['GetEmployees', { query: GET_TODO_ASSIGNED_STATS }],
     onCompleted: () => {
       handleCloseModal();
       toast.success(`User Deleted Successfully!`);
@@ -180,19 +191,19 @@ const UsersPage = () => {
     },
   });
 
-  const style = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    border: '2px solid #000',
-    boxShadow: 24,
-    p: 4,
-  };
+  // const style = {
+  //   position: 'absolute',
+  //   top: '50%',
+  //   left: '50%',
+  //   transform: 'translate(-50%, -50%)',
+  //   width: 400,
+  //   bgcolor: 'background.paper',
+  //   border: '2px solid #000',
+  //   boxShadow: 24,
+  //   p: 4,
+  // };
 
-  const [newUser, setNewUser] = useState<null | UsersNewData>(null);
+  const [isNewUser, setIsNewUser] = useState<boolean>(false);
   const [editRowId, setEditRowId] = useState<string | null>(null);
   const [editedRow, setEditedRow] = useState<Partial<UsersData>>({});
   const [modalType, setModalType] = useState<null | 'view' | 'delete'>(null);
@@ -203,9 +214,11 @@ const UsersPage = () => {
     createUserMutation,
     { loading: isCreating, error: errorCreatingUser },
   ] = useMutation(CREATE_USER, {
-    refetchQueries: ['GetUsers'],
+    refetchQueries: ['GetEmployees', { query: GET_TODO_ASSIGNED_STATS }],
     onCompleted: () => {
-      setNewUser(null);
+      setIsNewUser(false);
+      setEditedRow({});
+      setEditRowId(null);
       toast.success(`New User Added Successfully!`);
     },
     onError: () => {
@@ -218,7 +231,7 @@ const UsersPage = () => {
   const [updateUserMutation, { loading: isUpdating, error: errorUpdating }] =
     useMutation(UPDATE_USER, {
       refetchQueries: [
-        'GetUsers',
+        'GetEmployees',
         {
           query: FETCH_USER,
           variables: { documentId: editRowId },
@@ -240,14 +253,25 @@ const UsersPage = () => {
     if (selectedRow) {
       setSelectedRow(null);
     }
-    setModalType(null);
+    // setModalType(null);
     setIsModalOpen(false);
   };
 
   const isNumber = filterValue === 'age';
 
+  const globalLock = !!(isNewUser || editRowId);
+
+  const validationSchema = Yup.object({
+    firstName: Yup.string().required('First Name required'),
+    lastName: Yup.string().required('Last Name is required'),
+    age: Yup.number()
+      .required('Age is required')
+      .min(18, 'Age must be at least 18')
+      .max(60, 'Age must be at most 60'),
+  });
+
   return (
-    <div className="container mt-[24px]">
+    <Container sx={{ mt: 3 }}>
       {/* Head */}
       <Box
         sx={{
@@ -260,23 +284,26 @@ const UsersPage = () => {
         <Button
           variant="contained"
           color="primary"
-          disabled={!!newUser}
+          disabled={globalLock}
           onClick={() => {
-            setNewUser({
+            setEditRowId(null);
+            setEditedRow({
               firstName: '',
               lastName: '',
-              age: null,
+              age: undefined,
             });
+            setIsNewUser(true);
           }}>
           Add New User
         </Button>
       </Box>
-      <div className="mt-[24px] ">
-        <div className="flex gap-[24px] mb-[24px]">
+      <Box mt={'24px'}>
+        <Box display="flex" gap="24px" mb="24px">
           {/* Users Search */}
           <TextField
+            fullWidth
             id="outlined-basic"
-            label="Search Query"
+            label="Search"
             variant="outlined"
             type={isNumber ? 'number' : 'text'}
             name="search"
@@ -293,7 +320,7 @@ const UsersPage = () => {
           />
 
           {/* Users Filter dropdown */}
-          <FormControl fullWidth>
+          <FormControl sx={{ width: '240px' }}>
             <InputLabel id="demo-simple-select-label">Filter</InputLabel>
             <Select
               labelId="demo-simple-select-label"
@@ -307,257 +334,329 @@ const UsersPage = () => {
               <MenuItem value={'age'}>Age</MenuItem>
             </Select>
           </FormControl>
-        </div>
+        </Box>
 
         {/* Users Table */}
         <DataDisplay<UsersResponse | undefined>
           data={data}
           error={error?.message}
           isLoading={isLoading}>
-          <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-            <TableContainer sx={{ maxHeight: 440 }}>
-              <Table stickyHeader aria-label="sticky table">
-                <TableHead>
-                  <TableRow>
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.id}
-                        align={'left'}
-                        style={{
-                          minWidth: column.minWidth,
-                          fontWeight: 'bold',
-                        }}>
-                        {column.label}
-                      </TableCell>
-                    ))}
-                    <TableCell
-                      align={'left'}
-                      style={{
-                        fontWeight: 'bold',
-                      }}>
-                      {'Actions'}
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map((row: UsersData) => {
-                    const isEditing = editRowId === row.documentId;
+          <Formik
+            initialValues={editedRow}
+            onSubmit={async (values, { setFieldError }) => {
+              console.log('VALL', values);
+              if (values.firstName?.trim().length === 0) {
+                setFieldError('firstName', "First Name can't be empty");
+                return;
+              }
+              if (values.lastName?.trim().length === 0) {
+                setFieldError('lastName', "Last Name can't be empty");
+                return;
+              }
+              const sanitizedValues = {
+                firstName: values.firstName?.trim(),
+                lastName: values.lastName?.trim(),
+                age: values.age,
+              };
+              console.log('san', sanitizedValues);
+              if (isNewUser) {
+                await createUserMutation({
+                  variables: {
+                    data: sanitizedValues,
+                  },
+                }).catch((error) => {
+                  console.log('ERRRO');
+                  const field =
+                    error?.cause?.extensions?.error?.details?.errors?.[0]
+                      ?.path?.[0];
+                  const message =
+                    error?.cause?.extensions?.error?.details?.errors?.[0]
+                      ?.message;
 
-                    return (
-                      <TableRow
-                        hover
-                        role="checkbox"
-                        tabIndex={-1}
-                        key={row.documentId}>
-                        {columns.map((column) => {
-                          const value = row[column.id];
-                          const editedValue = editedRow[column.id];
+                  if (field && message) {
+                    setFieldError(field, message);
+                  } else {
+                    toast.error('Error while creating the user');
+                  }
 
-                          return (
-                            <TableCell key={column.id} align={'left'}>
-                              {isEditing ? (
-                                <TextField
-                                  value={editedValue ?? value}
-                                  onChange={(e) =>
-                                    setEditedRow((prev) => ({
-                                      ...prev,
-                                      [column.id]:
-                                        typeof value === 'number'
-                                          ? Number(e.target.value)
-                                          : e.target.value,
-                                    }))
-                                  }
-                                  variant="standard"
-                                  type={
-                                    typeof value === 'number'
-                                      ? 'number'
-                                      : 'text'
-                                  }
-                                  fullWidth
-                                />
-                              ) : column.format && typeof value === 'number' ? (
-                                column.format(value)
-                              ) : (
-                                String(value)
-                              )}
+                  toast.error(
+                    `${error?.cause?.extensions.error.details.errors[0].message} (${error?.cause?.extensions.error.details.errors[0].path[0]})` ||
+                      'Error while creating the user',
+                  );
+                });
+              } else {
+                await updateUserMutation({
+                  variables: {
+                    documentId: editRowId,
+                    data: editedRow,
+                  },
+                });
+                setEditRowId(null);
+                setEditedRow({});
+              }
+            }}
+            enableReinitialize
+            validationSchema={validationSchema}>
+            {({ handleSubmit, handleChange, values, errors, touched }) => (
+              <Form>
+                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                  <TableContainer sx={{ maxHeight: 440 }}>
+                    <Table
+                      stickyHeader
+                      aria-label="sticky table"
+                      sx={{ tableLayout: 'fixed', width: '100%' }}>
+                      <TableHead>
+                        <TableRow>
+                          {columns.map((column) => (
+                            <TableCell
+                              key={column.id}
+                              align={'left'}
+                              style={{
+                                minWidth: column.minWidth,
+                                fontWeight: 'bold',
+                              }}>
+                              {column.label}
                             </TableCell>
-                          );
-                        })}
+                          ))}
+                          <TableCell
+                            align={'left'}
+                            style={{
+                              fontWeight: 'bold',
+                            }}>
+                            {'Actions'}
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {isNewUser && (
+                          <TableRow hover role="checkbox" tabIndex={-1}>
+                            {columns.map((column, index) => {
+                              // const value = editedRow[column.id];
 
-                        <TableCell align="center">
-                          <Box display="flex" gap={1}>
-                            {isEditing ? (
-                              <>
+                              return (
+                                <TableCell key={column.id} align="left">
+                                  <TextField
+                                    variant="standard"
+                                    fullWidth
+                                    type={column.type}
+                                    name={column.id}
+                                    error={
+                                      touched[column.id] &&
+                                      Boolean(errors[column.id])
+                                    }
+                                    onPaste={(e) =>
+                                      column.type === 'number'
+                                        ? handlePaste(
+                                            e as React.ClipboardEvent<HTMLInputElement>,
+                                          )
+                                        : {}
+                                    }
+                                    value={
+                                      column.type === 'number' &&
+                                      values[column.id] === 0
+                                        ? ''
+                                        : values[column.id] || ''
+                                    }
+                                    helperText={
+                                      touched[column.id] && errors[column.id]
+                                    }
+                                    onChange={handleChange}
+                                    autoFocus={index === 0}
+                                  />
+                                </TableCell>
+                              );
+                            })}
+                            <TableCell align={'center'}>
+                              <Box display="flex" gap={1}>
                                 <Button
-                                  variant="outlined"
                                   color="primary"
-                                  disabled={isUpdating}
-                                  onClick={async () => {
-                                    await updateUserMutation({
-                                      variables: {
-                                        documentId: editRowId,
-                                        data: editedRow,
-                                      },
-                                    });
-                                    setEditRowId(null);
-                                    setEditedRow({});
-                                  }}>
-                                  Update
+                                  variant="outlined"
+                                  disabled={isCreating}
+                                  type="submit"
+                                  onClick={() => console.log('VALUES', values)}>
+                                  Create
                                 </Button>
                                 <Button
                                   color="primary"
-                                  disabled={isUpdating}
+                                  disabled={isCreating}
                                   onClick={() => {
-                                    setEditRowId(null);
                                     setEditedRow({});
+                                    setIsNewUser(false);
                                   }}>
                                   Cancel
                                 </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  onClick={() => {
-                                    setEditRowId(row.documentId);
-                                    setEditedRow({
-                                      firstName: row.firstName,
-                                      lastName: row.lastName,
-                                      age: row.age,
-                                    });
-                                  }}>
-                                  Edit
-                                </Button>
-                                <IconButton
-                                  size="small"
-                                  color="info"
-                                  onClick={() => handleOpenModal(row, 'view')}>
-                                  <VisibilityIcon fontSize="small" />
-                                </IconButton>
-                                <Tooltip title="Delete User">
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() =>
-                                      handleOpenModal(row, 'delete')
-                                    }>
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        )}
 
-                  {newUser && (
-                    <TableRow hover role="checkbox" tabIndex={-1}>
-                      {columns.map((column) => {
-                        const value = newUser[column.id];
+                        {rows.map((row: UsersData) => {
+                          const isEditing = editRowId === row.documentId;
 
-                        return (
-                          <TableCell key={column.id} align="left">
-                            <TextField
-                              variant="standard"
-                              fullWidth
-                              type={
-                                typeof value === 'number' ? 'number' : 'text'
-                              }
-                              value={value}
-                              onChange={(e) =>
-                                setNewUser((prev) =>
-                                  !prev
-                                    ? prev
-                                    : {
-                                        ...prev,
-                                        [column.id]:
+                          return (
+                            <TableRow
+                              hover
+                              role="checkbox"
+                              tabIndex={-1}
+                              key={row.documentId}>
+                              {columns.map((column) => {
+                                const value = row[column.id];
+                                const editedValue = editedRow[column.id];
+
+                                return (
+                                  <TableCell key={column.id} align={'left'}>
+                                    {isEditing ? (
+                                      <TextField
+                                        value={editedValue ?? value}
+                                        onChange={(e) =>
+                                          setEditedRow((prev) => ({
+                                            ...prev,
+                                            [column.id]:
+                                              typeof value === 'number'
+                                                ? Number(e.target.value)
+                                                : e.target.value,
+                                          }))
+                                        }
+                                        variant="standard"
+                                        type={
                                           typeof value === 'number'
-                                            ? Number(e.target.value)
-                                            : e.target.value,
-                                      },
-                                )
-                              }
-                            />
-                          </TableCell>
-                        );
-                      })}
-                      <TableCell align={'center'}>
-                        <Box display="flex" gap={1}>
-                          <Button
-                            color="primary"
-                            variant="outlined"
-                            disabled={isCreating}
-                            onClick={async () =>
-                              await createUserMutation({
-                                variables: {
-                                  data: newUser,
-                                },
-                              })
-                            }>
-                            Create
-                          </Button>
-                          <Button
-                            color="primary"
-                            disabled={isCreating}
-                            onClick={() => setNewUser(null)}>
-                            Cancel
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 100]}
-              component="div"
-              count={data?.employees_connection.pageInfo.total as number}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-          </Paper>
+                                            ? 'number'
+                                            : 'text'
+                                        }
+                                        fullWidth
+                                      />
+                                    ) : column.format &&
+                                      typeof value === 'number' ? (
+                                      column.format(value)
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+
+                              <TableCell align="center">
+                                <Box display="flex" gap={1}>
+                                  {isEditing ? (
+                                    <>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        disabled={isUpdating}
+                                        onClick={() => handleSubmit()}>
+                                        Update
+                                      </Button>
+                                      <Button
+                                        color="primary"
+                                        disabled={isUpdating}
+                                        onClick={() => {
+                                          setEditRowId(null);
+                                          setEditedRow({});
+                                        }}>
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        disabled={globalLock}
+                                        onClick={() => {
+                                          setEditRowId(row.documentId);
+                                          setEditedRow({
+                                            firstName: row.firstName,
+                                            lastName: row.lastName,
+                                            age: row.age,
+                                          });
+                                          setIsNewUser(false);
+                                        }}>
+                                        Edit
+                                      </Button>
+                                      <IconButton
+                                        size="small"
+                                        color="info"
+                                        disabled={globalLock}
+                                        onClick={() =>
+                                          handleOpenModal(row, 'view')
+                                        }>
+                                        <VisibilityIcon fontSize="small" />
+                                      </IconButton>
+                                      <Tooltip title="Delete User">
+                                        <IconButton
+                                          size="small"
+                                          color="error"
+                                          disabled={globalLock}
+                                          onClick={() =>
+                                            handleOpenModal(row, 'delete')
+                                          }>
+                                          <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  <TablePagination
+                    rowsPerPageOptions={[10, 25, 100]}
+                    component="div"
+                    count={data?.employees_connection.pageInfo.total as number}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                </Paper>
+                {/* <Logger />  */}
+              </Form>
+            )}
+          </Formik>
         </DataDisplay>
 
-        <Modal
-          open={isModalOpen}
-          onClose={handleModalClose}
-          aria-labelledby="modal-title"
-          aria-describedby="modal-description">
+        <Dialog open={isModalOpen} onClose={handleModalClose}>
           {modalType === 'view' ? (
-            <UserDetails userId={selectedRow?.documentId} />
+            <UserDetails
+              userId={selectedRow?.documentId}
+              handleClose={handleModalClose}
+            />
           ) : (
-            <Box sx={style}>
-              <Typography variant="h5" fontWeight="bold">
-                Are you sure you want to delete user #{selectedRow?.firstName}
-              </Typography>
-
-              <div className="flex justify-between">
-                <Button onClick={handleCloseModal} disabled={isDeleting}>
-                  Close
-                </Button>
-                <Button
-                  onClick={async () => {
-                    await deleteUserMutation({
-                      variables: {
-                        documentId: selectedRow?.documentId,
-                      },
-                    });
-                  }}
-                  disabled={isDeleting}>
-                  Delete
-                </Button>
-              </div>
-            </Box>
+            selectedRow && (
+              <>
+                <DialogTitle>Delete User</DialogTitle>
+                <DialogContent dividers>
+                  <Typography>
+                    Are you sure you want to delete User #
+                    {selectedRow?.firstName} {selectedRow?.lastName}
+                  </Typography>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseModal} disabled={isDeleting}>
+                    Close
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      await deleteUserMutation({
+                        variables: {
+                          documentId: selectedRow?.documentId,
+                        },
+                      });
+                    }}
+                    disabled={isDeleting}>
+                    Delete
+                  </Button>
+                </DialogActions>
+              </>
+            )
           )}
-        </Modal>
-      </div>
-    </div>
+        </Dialog>
+      </Box>
+    </Container>
   );
 };
 

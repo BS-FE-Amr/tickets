@@ -21,12 +21,12 @@ const DataDisplay = <T,>({
     return <Loading />;
   }
 
-  if (error) {
-    return <p>{error}</p>;
-  }
-
   if (data) {
     return children;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
   }
 
   return <Loading />;
